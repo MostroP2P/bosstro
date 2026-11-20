@@ -284,6 +284,19 @@ python3 tool/launcher_icon/build_sources.py && dart run flutter_launcher_icons  
   debug build may name one local test server (`BOSSTRO_TEST_BLOSSOM_SERVER`), the only `http://`
   origin it fetches from; a release build never reads it. Nothing logs a file key, a blob URL or
   a file's content.
+- **Waking the party** (`rust/src/push.rs`): a chat envelope is `p`-tagged to `pub(K_conv)`, which
+  [mostro-push-server](https://github.com/MostroP2P/mostro-push-server) cannot match to a
+  registration, so after a message of this key was taken by a relay Bosstro asks the server to
+  ring the party: `POST /api/notify` with the party's **trade pubkey** and nothing else, as
+  `app`'s `wake_peer` and Mostrix. Once per party per 10 s, in the background, never retried;
+  nothing when no relay took the message, and a wake that fails changes nothing of the message.
+  Text, attachments and retries all pass through it (`Router::publish`). There is no setting
+  for it, as in `app`. **Trade-off:** the push server sees the solver's IP address next to a
+  disputing party's trade pubkey; it gets no solver key, no dispute id and no content, answers
+  `202` whether or not the party registered, and the pubkey is never logged. The server is a
+  constant (`https://mostro-push-server.fly.dev`); tests talk to a local one. On the web build
+  the server's CORS refuses the request, which is logged like any other undelivered wake. This
+  is only the solver → party direction: push notifications *to* the solver are not implemented.
 - **Observed chat** (`rust/src/chat/observer.rs`, phase 5c): the buyer ↔ seller chat of a dispute
   this key holds, read only. A party of `app` discloses its chat key (`K_conv`) by sending, in its
   dispute chat with this key, exactly `Shared key: ` + 64 hex characters; it is taken only from

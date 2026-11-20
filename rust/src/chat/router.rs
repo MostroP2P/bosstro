@@ -72,6 +72,7 @@ use crate::disputes::feed::Feed;
 use crate::disputes::DisputeRecord;
 use crate::nostr::live_subs::LiveSubs;
 use crate::nostr::publish::{publish, Published};
+use crate::push::Waker;
 
 /// Capacity of the update channel toward Dart.
 const UPDATE_CAPACITY: usize = 256;
@@ -366,6 +367,8 @@ pub(crate) struct Router {
     live: Mutex<HashSet<(String, SubscriptionId)>>,
     /// This key's messages being published now.
     in_flight: Mutex<HashSet<String>>,
+    /// Rings a party after a message of this key reached a relay.
+    waker: Arc<Waker>,
     /// The monotonic origin of the rate budget's clock.
     started: crate::rt::time::Instant,
     /// Serialises the channel syncs.
@@ -384,6 +387,7 @@ impl Router {
         feed: Arc<Feed>,
         store: ChatStore,
         updates: broadcast::Sender<ChatUpdate>,
+        waker: Arc<Waker>,
     ) -> Arc<Self> {
         Arc::new(Self {
             client,
@@ -400,6 +404,7 @@ impl Router {
             limits: Mutex::new(RateLimits::default()),
             live: Mutex::new(HashSet::new()),
             in_flight: Mutex::new(HashSet::new()),
+            waker,
             started: crate::rt::time::Instant::now(),
             sync_lock: tokio::sync::Mutex::new(()),
             ingest_lock: tokio::sync::Mutex::new(()),
@@ -919,7 +924,7 @@ impl Router {
         let router = self.clone();
         let id = record.message_id.clone();
         crate::rt::spawn(async move {
-            router.publish(&channel, &id, &event).await;
+            router.publish(&channel, &id, &event, &party_key).await;
         });
         Ok(record.view(true))
     }
@@ -927,7 +932,9 @@ impl Router {
     /// Publish one of this key's messages and store how it went: sent as
     /// soon as one relay took it (`nostr::publish`: the slowest relay is not
     /// waited for), failed when none did, unless a relay echoed it meanwhile.
-    async fn publish(&self, channel: &ChannelRef, id: &str, event: &Event) {
+    /// The party is woken for a message a relay took (`crate::push`): its
+    /// envelope alone cannot ring the party's device.
+    async fn publish(&self, channel: &ChannelRef, id: &str, event: &Event, party: &PublicKey) {
         let delivered = publish(&self.client, event).await == Published::Taken;
         {
             let _guard = self.ingest_lock.lock().await;
@@ -944,7 +951,9 @@ impl Router {
             }
             lock(&self.in_flight).remove(id);
         }
-        if !delivered {
+        if delivered {
+            self.waker.wake(party);
+        } else {
             log::warn!("[chat] no relay took a message");
         }
         self.announce(channel);
@@ -1040,6 +1049,7 @@ pub(crate) async fn start(client: Arc<Client>, feed: Arc<Feed>) {
             feed,
             ChatStore::app(),
             updates().clone(),
+            Waker::production(),
         );
         router.spawn_reader();
         spawn_feed_listener(router.clone());
@@ -1261,6 +1271,8 @@ pub(crate) mod tests {
         pub(crate) feed: Arc<Feed>,
         pub(crate) router: Arc<Router>,
         pub(crate) updates: broadcast::Receiver<ChatUpdate>,
+        /// What the bench's own push server received.
+        pub(crate) wakes: crate::push::tests::Seen,
     }
 
     fn taken(solver: &Keys, buyer: Option<&Keys>, seller: Option<&Keys>) -> TakenDispute {
@@ -1286,6 +1298,13 @@ pub(crate) mod tests {
     }
 
     pub(crate) async fn bench_with(feed_store: Store, chat_store: ChatStore) -> Bench {
+        bench_on(feed_store, chat_store, 202).await
+    }
+
+    /// A bench whose push server (a local one: no test reaches the real
+    /// one) answers every wake with `push_status`.
+    async fn bench_on(feed_store: Store, chat_store: ChatStore, push_status: u16) -> Bench {
+        let (push_server, wakes) = crate::push::tests::serve(push_status).await;
         let relay = MockRelay::run().await.unwrap();
         let client = connected(&relay).await;
         let node = Keys::generate();
@@ -1304,7 +1323,14 @@ pub(crate) mod tests {
         .unwrap();
         let (tx, updates) = broadcast::channel(UPDATE_CAPACITY);
         let subs: &'static LiveSubs = Box::leak(Box::default());
-        let router = Router::new(client, subs, feed.clone(), chat_store, tx);
+        let router = Router::new(
+            client,
+            subs,
+            feed.clone(),
+            chat_store,
+            tx,
+            Waker::to(&push_server),
+        );
         router.spawn_reader();
         router
             .sync(Some(node.public_key().to_hex()), Some(solver.clone()))
@@ -1326,6 +1352,7 @@ pub(crate) mod tests {
             feed,
             router,
             updates,
+            wakes,
         }
     }
 
@@ -1348,6 +1375,11 @@ pub(crate) mod tests {
                 .messages(&self.channel(dispute, party))
                 .await
                 .unwrap()
+        }
+
+        /// The trade pubkeys the push server was asked to wake, in order.
+        pub(crate) fn woken(&self) -> Vec<String> {
+            crate::push::tests::woken(&self.wakes)
         }
 
         pub(crate) async fn wait_for(&self, dispute: &str, party: ChatParty, count: usize) {
@@ -1679,6 +1711,59 @@ pub(crate) mod tests {
         );
     }
 
+    /// A message a relay took rings the party it was written to, by its
+    /// trade key, and only that party.
+    #[tokio::test]
+    async fn a_message_a_relay_took_wakes_its_party() {
+        let b = bench().await;
+        let seller = b.seller.keys.public_key().to_hex();
+        let buyer = b.buyer.keys.public_key().to_hex();
+
+        b.router
+            .send(DISPUTE_A, ChatParty::Seller, "one moment")
+            .await
+            .unwrap();
+        eventually("the seller is woken", || async {
+            b.woken() == [seller.clone()]
+        })
+        .await;
+
+        // At once: the seller was just woken, the buyer was not.
+        b.router
+            .send(DISPUTE_A, ChatParty::Seller, "and another thing")
+            .await
+            .unwrap();
+        b.router
+            .send(DISPUTE_A, ChatParty::Buyer, "hello")
+            .await
+            .unwrap();
+        eventually("the buyer is woken", || async {
+            lock(&b.router.in_flight).is_empty() && b.woken().contains(&buyer)
+        })
+        .await;
+        assert_eq!(b.woken(), [seller, buyer], "a burst is one wake per party");
+    }
+
+    /// The wake is not part of the send: a push server that refuses it
+    /// leaves the message sent.
+    #[tokio::test]
+    async fn a_refused_wake_leaves_the_message_sent() {
+        let b = bench_on(Store::memory(), ChatStore::memory(), 500).await;
+
+        let sent = b
+            .router
+            .send(DISPUTE_A, ChatParty::Seller, "one moment")
+            .await
+            .unwrap();
+
+        eventually("the wake is asked for", || async { b.woken().len() == 1 }).await;
+        let all = b.messages(DISPUTE_A, ChatParty::Seller).await;
+        assert_eq!(
+            (all[0].id.as_str(), all[0].delivery),
+            (sent.id.as_str(), ChatDelivery::Sent)
+        );
+    }
+
     /// No relay takes it: failed, and not sent again by itself. A retry is
     /// a new message that replaces it.
     #[tokio::test]
@@ -1697,6 +1782,7 @@ pub(crate) mod tests {
                 .any(|m| m.id == sent.id && m.delivery == ChatDelivery::Failed)
         })
         .await;
+        assert!(b.woken().is_empty(), "a message no relay took wakes nobody");
         // Only a failed message of this key can be retried.
         assert_eq!(
             b.router

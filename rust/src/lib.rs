@@ -20,5 +20,6 @@ mod disputes;
 mod mostro;
 mod node_pictures;
 mod nostr;
+mod push;
 mod rt;
 mod solver_slot;
