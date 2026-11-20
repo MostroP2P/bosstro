@@ -308,6 +308,13 @@ jobs:
       - name: Build Rust core to wasm (shared memory)
         run: ./scripts/build-web.sh
 
+      # The IndexedDB storage (the web's Storage backend) against a real
+      # browser. The runner's own Chrome and its matching chromedriver
+      # (CHROMEWEBDRIVER, set by the runner image, so read from the shell),
+      # so no download and no version mismatch.
+      - name: Test web storage (IndexedDB, headless Chrome)
+        run: CHROMEDRIVER="$CHROMEWEBDRIVER/chromedriver" ./scripts/test-web-storage.sh
+
       # --pwa-strategy=none: Flutter's service worker would take the same scope
       # as coi-serviceworker.min.js and evict the isolation shim (as in
       # MostroP2P/app).

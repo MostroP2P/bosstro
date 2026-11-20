@@ -498,7 +498,8 @@ fn status_of(raw: &str) -> OrderStatus {
     }
 }
 
-#[cfg(test)]
+// Native only, as `mostro::order_info::tests`, whose snapshot it reads.
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::mostro::order_info::tests::snapshot;

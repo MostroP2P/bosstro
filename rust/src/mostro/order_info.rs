@@ -290,7 +290,9 @@ pub(crate) async fn send_lookup(
     }
 }
 
-#[cfg(test)]
+// Native only, as the `mostro::replies` test rig it drives: on wasm that rig
+// does not exist, and `scripts/test-web-storage.sh` builds every test module.
+#[cfg(all(test, not(target_arch = "wasm32")))]
 pub(crate) mod tests {
     use super::*;
     use crate::api::disputes::DisputeStatus;
