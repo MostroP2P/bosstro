@@ -34,7 +34,7 @@ ARB files (`lib/l10n/app_en.arb` is the source).
 | D10 | No mnemonic derivation for the solver key, so no derivation path. In Mostrix the only mnemonic-derived key is the trader identity, which must not be reused as the solver key. |
 | D11 | Brand from `app`: the Mostro mascot and logo. The launcher icon is Bosstro's own emblem (`icons/bosstro.png`, the mascot as a judge), so the two apps cannot be confused on one phone. |
 | D12 | Solver permissions are *Read* (take and chat) or *Read-Write* (also settle / cancel, and take over an `in-progress` dispute held by a Read solver). Bosstro learns the permission from the daemon's answers and caches it per node. |
-| D13 | Serbero (the assistant Read solver) is supported: its `send-dm` messages and handoffs are read only from trusted senders. |
+| D13 | Serbero (the assistant Read solver) is supported: its `send-dm` messages and handoffs are read only from trusted senders — one Serbero pubkey per node, set in Settings. |
 | A1 | License AGPL-3.0-or-later (code is copied from `app`, which is AGPL). |
 | A2 | **Android is the target** the app is built for. **Linux and web** also build and run, for development and convenience, without the Android-only key protections: no screenshot blocking, no nsec copy (`PlatformCapabilities`), no QR scanning, and on the web the key sits in browser storage, much weaker than the Keystore. iOS can come later. |
 | A3 | l10n: `en`, `es`, `it`, `fr`, `de`, `nl` and `pt` (Brazil), as `app`; English is the source. The app follows the system's language until the solver picks one in Settings (kept in Rust). |
@@ -65,6 +65,7 @@ rust/src/chat/       # the dispute chat: channel keys (in memory), the router, s
 rust/src/db/         # Storage: SQLite (native) and IndexedDB (web), one trait
 rust/src/disputes/   # kind 38386: parsing, merge (NIP-01 order), the active node's feed
 rust/src/mostro/     # the daemon's answers to the solver key, AdminTakeDispute, AdminSettle / AdminCancel, AdminOrderInfo, solver standing
+rust/src/serbero/    # Serbero's reports to the solver key: the trust boundary (intake), its text contract (parse), the live subscription and storage (router), the dispute's mediation (view)
 rust/src/nostr/      # the relay pool, live subscriptions, liveness probe, event readers, transport v2
 rust/migrations/     # sqlx migrations; never edit one that shipped, add a new file
 rust_builder/        # cargokit glue, copied from app
@@ -347,7 +348,13 @@ python3 tool/launcher_icon/build_sources.py && dart run flutter_launcher_icons  
   solver (38386 `cooperatively-canceled` / `released` in mostrod 0.20); taken disputes are
   reconciled from 38386, and a late request answered `CooperativeCancelAccepted` reads closed.
 - **Serbero:** kind 14 `send-dm` messages to the solver key, read only from trusted senders, never
-  treated as protocol actions.
+  treated as protocol actions (`rust/src/serbero/`). Taken only from the Serbero pubkey trusted
+  on the active node, as a `Message::Dm` with action `send-dm`, a text payload and a first line
+  `Dispute <id> · <subject>` naming the message id's dispute (Serbero's `docs/messages.md` §3).
+  Serbero's chat with the parties is keyed with its own key, so only what it sends the solver
+  at handoff can be shown: the brief, the transcript (parts reassembled), updates and the final
+  report, kept in `serbero_messages`. A solver whose key is not in that Serbero's `[[solvers]]`
+  gets nothing.
 
 ## Style
 
@@ -377,8 +384,8 @@ One PR per phase; long phases split into phased PRs. Conventional commits, branc
 
 Phases: 0 scaffold · 1 solver key · 2 nodes and relays · 3 pending disputes · 4 take dispute ·
 5 dispute detail and chat · 5c observer · 6 resolution · 7 manual verification on a device ·
-8 release (`docs/RELEASING.md`). After the MVP: order lookup (issue #51). Serbero and notifications
-are post-MVP.
+8 release (`docs/RELEASING.md`). After the MVP: order lookup (issue #51), Serbero's mediation
+(issue #62). Notifications are post-MVP.
 
 A PR's title is its line in the release notes and `CHANGELOG.md` (`tool/release_notes.dart`
 groups by its conventional-commit type): write it for the solver who reads the release.

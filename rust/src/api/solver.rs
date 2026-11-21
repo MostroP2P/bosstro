@@ -101,6 +101,7 @@ pub async fn load_solver_key(secret: Vec<u8>) -> Result<SolverKeyInfo, SolverKey
     // chats of the disputes it holds.
     crate::mostro::replies::follow().await;
     crate::chat::router::follow().await;
+    crate::serbero::router::follow().await;
     Ok(info_of(&keys))
 }
 
@@ -111,6 +112,7 @@ pub async fn unload_solver_key() -> bool {
     // chats close and their keys are forgotten.
     crate::mostro::replies::follow().await;
     crate::chat::router::follow().await;
+    crate::serbero::router::follow().await;
     had
 }
 

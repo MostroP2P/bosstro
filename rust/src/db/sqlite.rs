@@ -15,6 +15,7 @@ use crate::api::relays::RelayInfo;
 use crate::api::resolve::{BondSlash, ResolvedAs};
 use crate::db::Storage;
 use crate::chat::observer::{ObservedRecord, ObservedRef};
+use crate::serbero::{SerberoRecord, SerberoRef};
 use crate::chat::{ChannelRef, ChatRecord};
 use crate::disputes::{DisputeRecord, TakenDispute};
 
@@ -32,6 +33,11 @@ const CHAT_COLUMNS: &str = "mostro_pubkey, dispute_id, party, solver_pubkey, mes
 /// reads them.
 const OBSERVED_COLUMNS: &str = "mostro_pubkey, dispute_id, solver_pubkey, message_id, sender, \
      content, created_at, received_at";
+
+/// Every column of `serbero_messages`, in the order [`serbero_from_row`]
+/// reads them.
+const SERBERO_COLUMNS: &str = "mostro_pubkey, dispute_id, solver_pubkey, event_id, \
+     serbero_pubkey, content, created_at, received_at";
 
 /// The condition that picks one channel's rows.
 const CHANNEL_WHERE: &str =
@@ -371,6 +377,46 @@ impl Storage for SqliteStorage {
             .collect())
     }
 
+    async fn insert_serbero_message(&self, m: &SerberoRecord) -> Result<bool> {
+        let done = sqlx::query(&format!(
+            "INSERT OR IGNORE INTO serbero_messages ({SERBERO_COLUMNS})
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        ))
+        .bind(&m.conversation.mostro_pubkey)
+        .bind(&m.conversation.dispute_id)
+        .bind(&m.conversation.solver_pubkey)
+        .bind(&m.event_id)
+        .bind(&m.serbero_pubkey)
+        .bind(&m.content)
+        .bind(m.created_at)
+        .bind(m.received_at)
+        .execute(&self.pool)
+        .await?;
+        Ok(done.rows_affected() > 0)
+    }
+
+    async fn list_serbero_messages(&self, reports: &SerberoRef) -> Result<Vec<SerberoRecord>> {
+        let rows = sqlx::query(&format!(
+            "SELECT {SERBERO_COLUMNS} FROM serbero_messages
+             WHERE mostro_pubkey = ? AND dispute_id = ? AND solver_pubkey = ?"
+        ))
+        .bind(&reports.mostro_pubkey)
+        .bind(&reports.dispute_id)
+        .bind(&reports.solver_pubkey)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .iter()
+            .filter_map(|row| match serbero_from_row(row) {
+                Ok(record) => Some(record),
+                Err(e) => {
+                    log::warn!("[db] skipping unreadable Serbero row: {e}");
+                    None
+                }
+            })
+            .collect())
+    }
+
     async fn save_attachment_blob(&self, sha256: &str, blob: &[u8]) -> Result<()> {
         sqlx::query(
             "INSERT OR REPLACE INTO attachment_blobs (sha256, data, size, created_at)
@@ -554,6 +600,21 @@ fn observed_from_row(row: &sqlx::sqlite::SqliteRow) -> Result<ObservedRecord> {
     })
 }
 
+fn serbero_from_row(row: &sqlx::sqlite::SqliteRow) -> Result<SerberoRecord> {
+    Ok(SerberoRecord {
+        conversation: SerberoRef {
+            mostro_pubkey: row.try_get("mostro_pubkey")?,
+            dispute_id: row.try_get("dispute_id")?,
+            solver_pubkey: row.try_get("solver_pubkey")?,
+        },
+        event_id: row.try_get("event_id")?,
+        serbero_pubkey: row.try_get("serbero_pubkey")?,
+        content: row.try_get("content")?,
+        created_at: row.try_get("created_at")?,
+        received_at: row.try_get("received_at")?,
+    })
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -646,6 +707,16 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn observed_chats_never_mix_with_each_other_or_the_chat() {
         contract::observed_chats_never_mix_with_each_other_or_the_chat(&store().await).await;
+    }
+
+    #[tokio::test]
+    async fn serbero_messages_round_trip() {
+        contract::serbero_messages_round_trip(&store().await).await;
+    }
+
+    #[tokio::test]
+    async fn serbero_reports_never_mix() {
+        contract::serbero_reports_never_mix(&store().await).await;
     }
 
     #[tokio::test]

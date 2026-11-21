@@ -13,7 +13,7 @@ protocol, persistence) with a Flutter UI, bridged by
 [flutter_rust_bridge](https://github.com/fzyzcjy/flutter_rust_bridge).
 
 > **Status:** the MVP is complete, verified on a device and released: v0.1.0 was the first
-> release. Serbero and notifications come next.
+> release. Notifications come next.
 
 ## What it does
 
@@ -30,6 +30,10 @@ protocol, persistence) with a Flutter UI, bridged by
 - **Chat** with the buyer and the seller of each dispute you hold, end-to-end encrypted, with
   images and PDFs. When a party shares their chat key, read the conversation between the
   buyer and the seller too.
+- **Serbero's mediation.** When [Serbero](https://github.com/MostroP2P/serbero) mediated a
+  dispute before handing it to you, read its brief, the conversation it had with the buyer
+  and the seller, the messages after the handoff and its final report. Set the Serbero key
+  you trust on each node in Settings; your key must be one of that Serbero's solvers.
 - **Resolve:** pay the buyer or refund the seller (Read-Write solvers).
 - **Look up any order** of the node by its ID, in dispute or not: its real status, where the
   seller's sats are, the payment to the buyer and the deposits, as the node sees them now.

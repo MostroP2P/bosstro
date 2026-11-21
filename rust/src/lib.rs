@@ -21,4 +21,5 @@ mod mostro;
 mod node_pictures;
 mod nostr;
 mod rt;
+mod serbero;
 mod solver_slot;

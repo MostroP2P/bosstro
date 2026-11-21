@@ -26,7 +26,11 @@ void main() {
       workingDirectory: (dir ?? clone).path,
       environment: env,
     );
-    expect(result.exitCode, 0, reason: 'git ${args.join(' ')}: ${result.stderr}');
+    expect(
+      result.exitCode,
+      0,
+      reason: 'git ${args.join(' ')}: ${result.stderr}',
+    );
     return result;
   }
 
@@ -44,16 +48,16 @@ void main() {
 
   /// Commits [version] to the clone's files and pushes it to `origin/main`.
   void seedMain(String version, {String? pubspec}) {
-    File('${clone.path}/pubspec.yaml').writeAsStringSync(
-      'name: mostro\nversion: ${pubspec ?? version}+1\n',
-    );
+    File(
+      '${clone.path}/pubspec.yaml',
+    ).writeAsStringSync('name: mostro\nversion: ${pubspec ?? version}+1\n');
     File('${clone.path}/rust/Cargo.toml').writeAsStringSync(
       '[package]\nname = "rust"\nversion = "$version"\n\n'
       '[dependencies]\nfoo = { version = "1.0" }\n',
     );
-    File('${clone.path}/rust/Cargo.lock').writeAsStringSync(
-      '[[package]]\nname = "rust"\nversion = "$version"\n',
-    );
+    File(
+      '${clone.path}/rust/Cargo.lock',
+    ).writeAsStringSync('[[package]]\nname = "rust"\nversion = "$version"\n');
     git(['add', '-A']);
     git(['commit', '-qm', 'seed $version']);
     git(['push', '-q', 'origin', 'HEAD:main']);
@@ -130,9 +134,18 @@ exit 0
       // Assert
       expect(run.exitCode, 0, reason: '${run.stdout}${run.stderr}');
       const branch = 'chore/release-v2.0.1';
-      expect(remoteFile(branch, 'pubspec.yaml'), contains('version: 2.0.1+20001'));
-      expect(remoteFile(branch, 'rust/Cargo.toml'), contains('version = "2.0.1"'));
-      expect(remoteFile(branch, 'rust/Cargo.lock'), contains('version = "2.0.1"'));
+      expect(
+        remoteFile(branch, 'pubspec.yaml'),
+        contains('version: 2.0.1+20001'),
+      );
+      expect(
+        remoteFile(branch, 'rust/Cargo.toml'),
+        contains('version = "2.0.1"'),
+      );
+      expect(
+        remoteFile(branch, 'rust/Cargo.lock'),
+        contains('version = "2.0.1"'),
+      );
       expect(
         gitOut(['log', '-1', '--format=%s', branch], dir: origin),
         'chore(release): v2.0.1',
@@ -219,8 +232,9 @@ exit 0
 
     test('refuses to start with uncommitted changes', () {
       // Arrange
-      File('${clone.path}/pubspec.yaml')
-          .writeAsStringSync('dirty\n', mode: FileMode.append);
+      File(
+        '${clone.path}/pubspec.yaml',
+      ).writeAsStringSync('dirty\n', mode: FileMode.append);
 
       // Act
       final run = release('2.0.1');

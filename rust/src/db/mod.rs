@@ -28,6 +28,7 @@ use crate::api::relays::RelayInfo;
 use crate::api::disputes::DisputeStatus;
 use crate::api::chat::ChatDelivery;
 use crate::chat::observer::{ObservedRecord, ObservedRef};
+use crate::serbero::{SerberoRecord, SerberoRef};
 use crate::chat::{ChannelRef, ChatRecord};
 use crate::disputes::DisputeRecord;
 
@@ -70,6 +71,16 @@ pub mod settings_keys {
     /// [`SOLVER_STANDING_PREFIX`] for `node` and `solver` (both hex).
     pub fn solver_standing(node: &str, solver: &str) -> String {
         format!("{SOLVER_STANDING_PREFIX}{node}:{solver}")
+    }
+
+    /// The Serbero pubkey (hex) the solver trusts on one node (D13): only
+    /// `send-dm` messages from it are read as Serbero's mediation. Absent
+    /// while none is set, and then nothing from Serbero is read or kept.
+    pub const SERBERO_PUBKEY_PREFIX: &str = "serbero_pubkey:";
+
+    /// [`SERBERO_PUBKEY_PREFIX`] for `node` (hex).
+    pub fn serbero_pubkey(node: &str) -> String {
+        format!("{SERBERO_PUBKEY_PREFIX}{node}")
     }
 
     /// The language the solver chose for the app (a code such as `es`).
@@ -195,6 +206,15 @@ pub trait Storage: Send + Sync {
     /// Every message of one observed chat, in no particular order. Another
     /// one's never appear, and neither does any of the solver's own chats.
     async fn list_observed_messages(&self, observed: &ObservedRef) -> Result<Vec<ObservedRecord>>;
+
+    // ── Serbero's reports (`crate::serbero`), apart from every chat ─────────
+
+    /// Store `message` unless that dispute's reports already hold its event
+    /// id. Returns whether it was stored (false: a copy).
+    async fn insert_serbero_message(&self, message: &SerberoRecord) -> Result<bool>;
+    /// Every Serbero message of one dispute to one solver key on one node, in
+    /// no particular order. Another one's never appear.
+    async fn list_serbero_messages(&self, reports: &SerberoRef) -> Result<Vec<SerberoRecord>>;
 
     // ── Attachment cache (`crate::attachments`), encrypted blobs only ───────
 

@@ -9,6 +9,7 @@ use crate::api::relays::{RelayInfo, RelaySource, RelayStatus};
 use crate::db::{settings_keys, Storage};
 use crate::api::chat::{ChatDelivery, ChatParty, ChatSender};
 use crate::chat::observer::{ObservedRecord, ObservedRef};
+use crate::serbero::{SerberoRecord, SerberoRef};
 use crate::chat::{ChannelRef, ChatRecord};
 use crate::disputes::{DisputeRecord, TakenDispute};
 
@@ -576,6 +577,69 @@ pub(crate) async fn observed_chats_never_mix_with_each_other_or_the_chat(storage
     let rows = storage.list_observed_messages(&chats[3]).await.unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].message_id, "o3");
+}
+
+pub(crate) fn serbero_ref(node: &str, dispute: &str, solver: &str) -> SerberoRef {
+    SerberoRef {
+        mostro_pubkey: node.into(),
+        dispute_id: dispute.into(),
+        solver_pubkey: solver.into(),
+    }
+}
+
+pub(crate) fn serbero(reports: &SerberoRef, event_id: &str) -> SerberoRecord {
+    SerberoRecord {
+        conversation: reports.clone(),
+        event_id: event_id.into(),
+        serbero_pubkey: "cc".into(),
+        content: format!("Dispute x · transcript\n{event_id}"),
+        created_at: 100,
+        received_at: 200,
+    }
+}
+
+/// Serbero's reports keep each event once, whatever relay sent it, with what
+/// Serbero wrote.
+pub(crate) async fn serbero_messages_round_trip(storage: &impl Storage) {
+    let reports = serbero_ref("aa", DISPUTE_A, "ss");
+    assert!(storage.list_serbero_messages(&reports).await.unwrap().is_empty());
+    let brief = serbero(&reports, "e1");
+    let transcript = serbero(&reports, "e2");
+    assert!(storage.insert_serbero_message(&brief).await.unwrap());
+    assert!(storage.insert_serbero_message(&transcript).await.unwrap());
+    let mut copy = brief.clone();
+    copy.content = "something else".into();
+    copy.received_at = 999;
+    assert!(!storage.insert_serbero_message(&copy).await.unwrap());
+    let mut rows = storage.list_serbero_messages(&reports).await.unwrap();
+    rows.sort_by(|a, b| a.event_id.cmp(&b.event_id));
+    assert_eq!(rows, vec![brief, transcript]);
+}
+
+/// Reports of two nodes, disputes and solver keys share nothing (D6), and
+/// none of them is ever an observed message or one of the solver's chats.
+pub(crate) async fn serbero_reports_never_mix(storage: &impl Storage) {
+    let all = [
+        serbero_ref("aa", DISPUTE_A, "ss"),
+        serbero_ref("aa", DISPUTE_B, "ss"),
+        serbero_ref("bb", DISPUTE_A, "ss"),
+        serbero_ref("aa", DISPUTE_A, "tt"),
+    ];
+    for (n, reports) in all.iter().enumerate() {
+        let record = serbero(reports, &format!("e{n}"));
+        assert!(storage.insert_serbero_message(&record).await.unwrap());
+    }
+    for (n, reports) in all.iter().enumerate() {
+        let rows = storage.list_serbero_messages(reports).await.unwrap();
+        assert_eq!(rows.len(), 1, "{reports:?}");
+        assert_eq!(rows[0].event_id, format!("e{n}"));
+    }
+    let observed_chat = observed_ref("aa", DISPUTE_A, "ss");
+    assert!(storage.list_observed_messages(&observed_chat).await.unwrap().is_empty());
+    for party in [ChatParty::Buyer, ChatParty::Seller] {
+        let own = channel("aa", DISPUTE_A, party, "ss");
+        assert!(storage.list_chat_messages(&own).await.unwrap().is_empty());
+    }
 }
 
 /// The attachment cache: kept by hash, read back whole, bounded oldest first.

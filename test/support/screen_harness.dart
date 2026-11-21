@@ -13,6 +13,7 @@ import 'package:bosstro/features/nodes/providers/node_providers.dart';
 import 'package:bosstro/features/nodes/providers/relay_providers.dart';
 import 'package:bosstro/features/observer/providers/observer_providers.dart';
 import 'package:bosstro/features/orders/providers/orders_providers.dart';
+import 'package:bosstro/features/serbero/providers/serbero_providers.dart';
 import 'package:bosstro/features/settings/providers/language_provider.dart';
 import 'package:bosstro/features/solver_key/providers/solver_key_providers.dart';
 import 'package:bosstro/l10n/app_localizations.dart';
@@ -26,6 +27,7 @@ import 'fake_disputes.dart';
 import 'fake_nodes.dart';
 import 'fake_observer.dart';
 import 'fake_orders.dart';
+import 'fake_serbero.dart';
 import 'fake_settings.dart';
 import 'fake_solver_key.dart';
 
@@ -35,6 +37,7 @@ export 'fake_disputes.dart';
 export 'fake_nodes.dart';
 export 'fake_observer.dart';
 export 'fake_orders.dart';
+export 'fake_serbero.dart';
 export 'fake_settings.dart';
 export 'fake_solver_key.dart';
 
@@ -81,6 +84,7 @@ List<Override> fakeCoreOverrides({
   FakeObserverCore? observer,
   FakeOrdersCore? orders,
   FakeSettingsCore? settings,
+  FakeSerberoCore? serbero,
 }) {
   final nodeCore = nodes ?? FakeNodesCore(active: mostroNodePubkey);
   final keys =
@@ -108,6 +112,7 @@ List<Override> fakeCoreOverrides({
     observerCoreProvider.overrideWithValue(observer ?? FakeObserverCore()),
     ordersCoreProvider.overrideWithValue(orders ?? FakeOrdersCore()),
     settingsCoreProvider.overrideWithValue(settings ?? FakeSettingsCore()),
+    serberoCoreProvider.overrideWithValue(serbero ?? FakeSerberoCore()),
     languageProvider.overrideWith(() => LanguageNotifier(settings?.saved)),
   ];
 }

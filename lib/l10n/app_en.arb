@@ -2447,5 +2447,185 @@
         "type": "String"
       }
     }
+  },
+  "settingsSerbero": "Serbero",
+  "@settingsSerbero": {
+    "description": "Settings row: the Serbero pubkey trusted on the active node; opens a dialog to set it"
+  },
+  "settingsSerberoNone": "Not set",
+  "@settingsSerberoNone": {
+    "description": "Value of the Serbero row when no Serbero pubkey is set"
+  },
+  "serberoDialogTitle": "Trust Serbero",
+  "@serberoDialogTitle": {
+    "description": "Title of the dialog that sets the trusted Serbero pubkey"
+  },
+  "serberoDialogBody": "Paste the public key (npub or hex) of the Serbero that mediates on this node. Bosstro reads mediation reports only from this key.",
+  "@serberoDialogBody": {
+    "description": "Body of the Serbero pubkey dialog"
+  },
+  "serberoPubkeyLabel": "Serbero's public key",
+  "@serberoPubkeyLabel": {
+    "description": "Label of the Serbero pubkey field"
+  },
+  "serberoSave": "Save",
+  "@serberoSave": {
+    "description": "Primary action of the Serbero pubkey dialog"
+  },
+  "serberoRemove": "Stop trusting",
+  "@serberoRemove": {
+    "description": "Secondary action of the Serbero pubkey dialog: forget the trusted key"
+  },
+  "serberoErrorIsNode": "That is the node's own key, not Serbero's.",
+  "@serberoErrorIsNode": {
+    "description": "Error under the field when the pasted key is the node's own key"
+  },
+  "serberoCardTitle": "Serbero's mediation",
+  "@serberoCardTitle": {
+    "description": "Title of the Info pane card and the screen with Serbero's mediation of the dispute"
+  },
+  "serberoCardNotTrusted": "Set Serbero's key in Settings to read its mediation reports.",
+  "@serberoCardNotTrusted": {
+    "description": "Card line when no Serbero key is trusted on the node"
+  },
+  "serberoCardEmpty": "Nothing from Serbero about this dispute. Its report arrives when Serbero hands the dispute off, if your key is one of its solvers.",
+  "@serberoCardEmpty": {
+    "description": "Card line and empty-screen body when Serbero sent nothing about this dispute"
+  },
+  "serberoCardReceived": "Last report {time}",
+  "@serberoCardReceived": {
+    "description": "Card line: when Serbero's last report arrived",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "serberoReadAction": "Read Serbero's mediation",
+  "@serberoReadAction": {
+    "description": "Card action: opens Serbero's mediation"
+  },
+  "serberoBriefTitle": "Brief",
+  "@serberoBriefTitle": {
+    "description": "Section title: Serbero's summary at handoff"
+  },
+  "serberoTranscriptTitle": "Conversation",
+  "@serberoTranscriptTitle": {
+    "description": "Section title: the conversation Serbero had with the parties"
+  },
+  "serberoTranscriptParts": "{arrived} of {total} parts received",
+  "@serberoTranscriptParts": {
+    "description": "Under the conversation title when parts are missing",
+    "placeholders": {
+      "arrived": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "serberoUpdatesTitle": "After the handoff",
+  "@serberoUpdatesTitle": {
+    "description": "Section title: party messages after the handoff"
+  },
+  "serberoFinalTitle": "Final report",
+  "@serberoFinalTitle": {
+    "description": "Section title: Serbero's final report"
+  },
+  "serberoSenderToBuyer": "Serbero → buyer",
+  "@serberoSenderToBuyer": {
+    "description": "Sender label of a message Serbero wrote to the buyer"
+  },
+  "serberoSenderToSeller": "Serbero → seller",
+  "@serberoSenderToSeller": {
+    "description": "Sender label of a message Serbero wrote to the seller"
+  },
+  "serberoEmptyTitle": "No mediation yet",
+  "@serberoEmptyTitle": {
+    "description": "Empty-screen title when Serbero sent nothing about this dispute"
+  },
+  "serberoHandedOff": "Handed off: {reason}",
+  "@serberoHandedOff": {
+    "description": "Brief headline: Serbero handed the dispute off; reason is one of the serberoReason* strings",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "serberoGuidanceSent": "Guidance sent: {path}",
+  "@serberoGuidanceSent": {
+    "description": "Brief headline: Serbero guided the parties; path is one of the serberoPath* strings",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "serberoResolved": "Resolved: {status}",
+  "@serberoResolved": {
+    "description": "Final report headline; status is the dispute status in words",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "serberoReasonSelfResolutionStalled": "the parties did not settle it themselves in time",
+  "@serberoReasonSelfResolutionStalled": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonFactsGathered": "the facts are gathered",
+  "@serberoReasonFactsGathered": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonConflictingClaims": "the parties' accounts contradict each other",
+  "@serberoReasonConflictingClaims": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonFraudSignal": "signs of fraud",
+  "@serberoReasonFraudSignal": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonHumanRequested": "a party asked for a person",
+  "@serberoReasonHumanRequested": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonOutsideScope": "outside what Serbero mediates",
+  "@serberoReasonOutsideScope": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonUnresponsive": "a party stopped answering",
+  "@serberoReasonUnresponsive": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonRoundLimit": "too many rounds of questions",
+  "@serberoReasonRoundLimit": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonUncertain": "a fact stayed unclear",
+  "@serberoReasonUncertain": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonJudgeUnavailable": "the automatic reading failed",
+  "@serberoReasonJudgeUnavailable": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonFlood": "a party sent too many messages",
+  "@serberoReasonFlood": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoReasonOpeningFailed": "the mediation could not start",
+  "@serberoReasonOpeningFailed": {
+    "description": "Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff"
+  },
+  "serberoPathPaymentArrived": "the payment arrived",
+  "@serberoPathPaymentArrived": {
+    "description": "What Serbero guided the parties to do, shown after the colon of serberoGuidanceSent"
+  },
+  "serberoPathPaymentNotSent": "the payment was not sent",
+  "@serberoPathPaymentNotSent": {
+    "description": "What Serbero guided the parties to do, shown after the colon of serberoGuidanceSent"
   }
 }

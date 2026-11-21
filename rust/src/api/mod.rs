@@ -10,6 +10,7 @@ pub mod observer;
 pub mod order_info;
 pub mod relays;
 pub mod resolve;
+pub mod serbero;
 pub mod settings;
 pub mod solver;
 pub mod take;

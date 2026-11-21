@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:bosstro/features/disputes/services/disputes_core.dart';
 import 'package:bosstro/features/disputes/widgets/pending_dispute_row.dart';
 import 'package:bosstro/features/observer/widgets/observer_card.dart';
+import 'package:bosstro/features/serbero/widgets/serbero_card.dart';
 import 'package:bosstro/features/resolution/screens/resolution_screen.dart'
     show bondChoiceLabel, closedResultLabel;
 import 'package:bosstro/features/resolution/widgets/resolution_card.dart';
@@ -181,6 +182,8 @@ class DisputeInfoPane extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ObserverCard(disputeId: detail.disputeId),
+        const SizedBox(height: 12),
+        SerberoCard(disputeId: detail.disputeId),
         if (!detail.isClosed) ...[
           const SizedBox(height: 12),
           ResolutionCard(detail: detail),

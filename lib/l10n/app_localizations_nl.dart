@@ -1954,4 +1954,134 @@ class AppLocalizationsNl extends AppLocalizations {
   String orderAskedAt(String time) {
     return 'Opgevraagd om $time';
   }
+
+  @override
+  String get settingsSerbero => 'Serbero';
+
+  @override
+  String get settingsSerberoNone => 'Niet ingesteld';
+
+  @override
+  String get serberoDialogTitle => 'Serbero vertrouwen';
+
+  @override
+  String get serberoDialogBody =>
+      'Plak de publieke sleutel (npub of hex) van de Serbero die op deze node bemiddelt. Bosstro leest bemiddelingsrapporten alleen van deze sleutel.';
+
+  @override
+  String get serberoPubkeyLabel => 'Publieke sleutel van Serbero';
+
+  @override
+  String get serberoSave => 'Opslaan';
+
+  @override
+  String get serberoRemove => 'Niet meer vertrouwen';
+
+  @override
+  String get serberoErrorIsNode =>
+      'Dat is de sleutel van de node zelf, niet die van Serbero.';
+
+  @override
+  String get serberoCardTitle => 'Bemiddeling van Serbero';
+
+  @override
+  String get serberoCardNotTrusted =>
+      'Stel de sleutel van Serbero in bij Instellingen om zijn bemiddelingsrapporten te lezen.';
+
+  @override
+  String get serberoCardEmpty =>
+      'Serbero heeft niets over dit geschil gestuurd. Het rapport komt wanneer Serbero het geschil overdraagt, als jouw sleutel een van zijn solvers is.';
+
+  @override
+  String serberoCardReceived(String time) {
+    return 'Laatste rapport $time';
+  }
+
+  @override
+  String get serberoReadAction => 'Bemiddeling van Serbero lezen';
+
+  @override
+  String get serberoBriefTitle => 'Samenvatting';
+
+  @override
+  String get serberoTranscriptTitle => 'Gesprek';
+
+  @override
+  String serberoTranscriptParts(int arrived, int total) {
+    return '$arrived van $total delen ontvangen';
+  }
+
+  @override
+  String get serberoUpdatesTitle => 'Na de overdracht';
+
+  @override
+  String get serberoFinalTitle => 'Eindrapport';
+
+  @override
+  String get serberoSenderToBuyer => 'Serbero → koper';
+
+  @override
+  String get serberoSenderToSeller => 'Serbero → verkoper';
+
+  @override
+  String get serberoEmptyTitle => 'Nog geen bemiddeling';
+
+  @override
+  String serberoHandedOff(String reason) {
+    return 'Overgedragen: $reason';
+  }
+
+  @override
+  String serberoGuidanceSent(String path) {
+    return 'Begeleiding gestuurd: $path';
+  }
+
+  @override
+  String serberoResolved(String status) {
+    return 'Opgelost: $status';
+  }
+
+  @override
+  String get serberoReasonSelfResolutionStalled =>
+      'de partijen losten het niet op tijd zelf op';
+
+  @override
+  String get serberoReasonFactsGathered => 'de feiten zijn verzameld';
+
+  @override
+  String get serberoReasonConflictingClaims =>
+      'de verklaringen van de partijen spreken elkaar tegen';
+
+  @override
+  String get serberoReasonFraudSignal => 'signalen van fraude';
+
+  @override
+  String get serberoReasonHumanRequested => 'een partij vroeg om een persoon';
+
+  @override
+  String get serberoReasonOutsideScope => 'buiten wat Serbero bemiddelt';
+
+  @override
+  String get serberoReasonUnresponsive => 'een partij reageert niet meer';
+
+  @override
+  String get serberoReasonRoundLimit => 'te veel vraagrondes';
+
+  @override
+  String get serberoReasonUncertain => 'een feit bleef onduidelijk';
+
+  @override
+  String get serberoReasonJudgeUnavailable => 'de automatische lezing mislukte';
+
+  @override
+  String get serberoReasonFlood => 'een partij stuurde te veel berichten';
+
+  @override
+  String get serberoReasonOpeningFailed => 'de bemiddeling kon niet starten';
+
+  @override
+  String get serberoPathPaymentArrived => 'de betaling is aangekomen';
+
+  @override
+  String get serberoPathPaymentNotSent => 'de betaling is niet verstuurd';
 }
