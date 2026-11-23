@@ -291,7 +291,7 @@
   "detailFiatAmount": "Fiatbedrag",
   "detailPaymentMethod": "Betaalmethode",
   "detailPremium": "Premie",
-  "detailFee": "Nodekosten",
+  "detailFee": "Nodekosten (elke partij)",
   "detailOrderKind": "Ordertype",
   "detailBuyerKey": "Tradesleutel van de koper",
   "detailSellerKey": "Tradesleutel van de verkoper",

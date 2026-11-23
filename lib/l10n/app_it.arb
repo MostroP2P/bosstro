@@ -291,7 +291,7 @@
   "detailFiatAmount": "Importo fiat",
   "detailPaymentMethod": "Metodo di pagamento",
   "detailPremium": "Premio",
-  "detailFee": "Commissione del nodo",
+  "detailFee": "Commissione del nodo (ogni parte)",
   "detailOrderKind": "Tipo di ordine",
   "detailBuyerKey": "Chiave di operazione dell'acquirente",
   "detailSellerKey": "Chiave di operazione del venditore",

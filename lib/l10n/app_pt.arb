@@ -291,7 +291,7 @@
   "detailFiatAmount": "Valor em fiat",
   "detailPaymentMethod": "Método de pagamento",
   "detailPremium": "Prêmio",
-  "detailFee": "Taxa do nó",
+  "detailFee": "Taxa do nó (cada parte)",
   "detailOrderKind": "Tipo de ordem",
   "detailBuyerKey": "Chave de operação do comprador",
   "detailSellerKey": "Chave de operação do vendedor",

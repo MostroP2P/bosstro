@@ -1289,9 +1289,9 @@
   "@detailPremium": {
     "description": "Data row: the order's premium over the market price"
   },
-  "detailFee": "Node fee",
+  "detailFee": "Node fee (each party)",
   "@detailFee": {
-    "description": "Data row: the node's fee for the order, in sats"
+    "description": "Data row: the node's fee for the order, in sats. It is what each party pays, so half of what the node charges for the order"
   },
   "detailOrderKind": "Order type",
   "@detailOrderKind": {

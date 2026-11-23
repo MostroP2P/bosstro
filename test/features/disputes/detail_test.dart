@@ -179,7 +179,7 @@ void main() {
       for (final text in [
         '75.000 sats',
         '50 EUR',
-        'Comisión del nodo',
+        'Comisión del nodo (cada parte)',
         'Clave de trade del vendedor',
       ]) {
         await _scrollInfoTo(tester, find.text(text));
@@ -332,7 +332,7 @@ void main() {
         lessThan(top(find.text('ID de la orden'))),
       );
       expect(
-        top(find.text('Comisión del nodo')),
+        top(find.text('Comisión del nodo (cada parte)')),
         lessThan(top(find.text('Clave de trade del comprador'))),
       );
       expect(

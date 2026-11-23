@@ -1051,7 +1051,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get detailPremium => 'Premie';
 
   @override
-  String get detailFee => 'Nodekosten';
+  String get detailFee => 'Nodekosten (elke partij)';
 
   @override
   String get detailOrderKind => 'Ordertype';

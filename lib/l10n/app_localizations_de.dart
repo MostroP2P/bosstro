@@ -1055,7 +1055,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get detailPremium => 'Aufschlag';
 
   @override
-  String get detailFee => 'Node-Gebühr';
+  String get detailFee => 'Node-Gebühr (jede Partei)';
 
   @override
   String get detailOrderKind => 'Order-Typ';

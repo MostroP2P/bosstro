@@ -1046,7 +1046,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get detailPremium => 'Premium';
 
   @override
-  String get detailFee => 'Node fee';
+  String get detailFee => 'Node fee (each party)';
 
   @override
   String get detailOrderKind => 'Order type';

@@ -291,7 +291,7 @@
   "detailFiatAmount": "Monto en fiat",
   "detailPaymentMethod": "Método de pago",
   "detailPremium": "Prima",
-  "detailFee": "Comisión del nodo",
+  "detailFee": "Comisión del nodo (cada parte)",
   "detailOrderKind": "Tipo de orden",
   "detailBuyerKey": "Clave de trade del comprador",
   "detailSellerKey": "Clave de trade del vendedor",

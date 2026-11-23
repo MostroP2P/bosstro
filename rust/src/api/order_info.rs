@@ -216,7 +216,8 @@ pub struct OrderSnapshot {
     pub status_raw: String,
     /// Sats.
     pub amount: i64,
-    /// The node's fee, sats.
+    /// The node's fee, sats: what each party pays, half of what the node charges
+    /// for the order (mostrod `get_fee`).
     pub fee: i64,
     /// What routing the payment to the buyer cost, sats.
     pub routing_fee: i64,
