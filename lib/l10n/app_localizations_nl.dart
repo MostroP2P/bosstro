@@ -1954,4 +1954,14 @@ class AppLocalizationsNl extends AppLocalizations {
   String orderAskedAt(String time) {
     return 'Opgevraagd om $time';
   }
+
+  @override
+  String get pushDisputeNewTitle => 'Nieuw dispuut';
+
+  @override
+  String get pushDisputeNewBody =>
+      'Een dispuut wacht op een solver op je node.';
+
+  @override
+  String get pushDisputesChannelName => 'Nieuwe disputen';
 }

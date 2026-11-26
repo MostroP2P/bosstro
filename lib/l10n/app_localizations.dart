@@ -3401,6 +3401,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Asked at {time}'**
   String orderAskedAt(String time);
+
+  /// Push notification, title: a dispute was opened on the solver's node. Shown by Android from android/app/src/main/res/values*/strings.xml (push_dispute_new_title), which a test keeps equal to this
+  ///
+  /// In en, this message translates to:
+  /// **'New dispute'**
+  String get pushDisputeNewTitle;
+
+  /// Push notification, body. It names no dispute, node or party: it shows on the lock screen. Android string push_dispute_new_body
+  ///
+  /// In en, this message translates to:
+  /// **'A dispute is waiting for a solver on your node.'**
+  String get pushDisputeNewBody;
+
+  /// The name of the notification channel for new disputes, in Android's settings of the app. Android string push_disputes_channel_name
+  ///
+  /// In en, this message translates to:
+  /// **'New disputes'**
+  String get pushDisputesChannelName;
 }
 
 class _AppLocalizationsDelegate

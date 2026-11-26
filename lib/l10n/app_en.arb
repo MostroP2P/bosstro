@@ -2447,5 +2447,17 @@
         "type": "String"
       }
     }
+  },
+  "pushDisputeNewTitle": "New dispute",
+  "@pushDisputeNewTitle": {
+    "description": "Push notification, title: a dispute was opened on the solver's node. Shown by Android from android/app/src/main/res/values*/strings.xml (push_dispute_new_title), which a test keeps equal to this"
+  },
+  "pushDisputeNewBody": "A dispute is waiting for a solver on your node.",
+  "@pushDisputeNewBody": {
+    "description": "Push notification, body. It names no dispute, node or party: it shows on the lock screen. Android string push_dispute_new_body"
+  },
+  "pushDisputesChannelName": "New disputes",
+  "@pushDisputesChannelName": {
+    "description": "The name of the notification channel for new disputes, in Android's settings of the app. Android string push_disputes_channel_name"
   }
 }

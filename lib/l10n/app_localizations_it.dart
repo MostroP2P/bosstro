@@ -1951,4 +1951,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String orderAskedAt(String time) {
     return 'Consultato alle $time';
   }
+
+  @override
+  String get pushDisputeNewTitle => 'Nuova disputa';
+
+  @override
+  String get pushDisputeNewBody =>
+      'Una disputa è in attesa di un solver sul tuo nodo.';
+
+  @override
+  String get pushDisputesChannelName => 'Nuove dispute';
 }

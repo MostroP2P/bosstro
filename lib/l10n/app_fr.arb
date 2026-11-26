@@ -548,5 +548,8 @@
   "orderDepositsTitle": "Dépôts ({count})",
   "orderBondOfRoot": "{role} (ordre principal)",
   "orderFiatRangeValue": "{min} – {max} {code}",
-  "orderAskedAt": "Consulté à {time}"
+  "orderAskedAt": "Consulté à {time}",
+  "pushDisputeNewTitle": "Nouveau litige",
+  "pushDisputeNewBody": "Un litige est en attente d'un solver sur votre nœud.",
+  "pushDisputesChannelName": "Nouveaux litiges"
 }

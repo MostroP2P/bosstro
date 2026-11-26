@@ -548,5 +548,8 @@
   "orderDepositsTitle": "Depósitos ({count})",
   "orderBondOfRoot": "{role} (orden raíz)",
   "orderFiatRangeValue": "{min} – {max} {code}",
-  "orderAskedAt": "Consultado a las {time}"
+  "orderAskedAt": "Consultado a las {time}",
+  "pushDisputeNewTitle": "Nueva disputa",
+  "pushDisputeNewBody": "Hay una disputa esperando solver en tu nodo.",
+  "pushDisputesChannelName": "Nuevas disputas"
 }

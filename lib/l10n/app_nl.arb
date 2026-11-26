@@ -548,5 +548,8 @@
   "orderDepositsTitle": "Borg ({count})",
   "orderBondOfRoot": "{role} (hoofdorder)",
   "orderFiatRangeValue": "{min} – {max} {code}",
-  "orderAskedAt": "Opgevraagd om {time}"
+  "orderAskedAt": "Opgevraagd om {time}",
+  "pushDisputeNewTitle": "Nieuw dispuut",
+  "pushDisputeNewBody": "Een dispuut wacht op een solver op je node.",
+  "pushDisputesChannelName": "Nieuwe disputen"
 }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A release build removes the resources no code refers to. The title and
+     the body of the new-dispute push are named only by the push server, in
+     the message itself (title_loc_key, body_loc_key): without this they are
+     removed and the notification shows empty, in release builds only. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/push_dispute_new_title,@string/push_dispute_new_body,@string/push_disputes_channel_name" />
