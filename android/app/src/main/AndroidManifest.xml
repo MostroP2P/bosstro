@@ -9,6 +9,10 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- Showing a notification (Android 13+): the new-dispute push. Asked for
+         when the solver turns notifications on, never at startup. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- No Auto Backup and no device transfer: the solver key is Keystore-bound
          and must never be copied to Google. tools:replace keeps a merged
          library manifest from turning it back on. -->
@@ -63,6 +67,11 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_accent" />
+        <!-- The channel of a push that names none, or one this build does not
+             have. Created in MainActivity.kt. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="bosstro_disputes" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
