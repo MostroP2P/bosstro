@@ -34,5 +34,21 @@ void main() {
         expect(PlatformCapabilities.copySecretOn(true, platform), isFalse);
       }
     });
+
+    test('only Android, as an app, can be sent a push notification', () {
+      expect(
+        PlatformCapabilities.canPushOn(false, TargetPlatform.android),
+        isTrue,
+      );
+      expect(
+        PlatformCapabilities.canPushOn(false, TargetPlatform.linux),
+        isFalse,
+      );
+      // Firebase is set up for the Android app only: not for a browser,
+      // even one on an Android phone.
+      for (final platform in [TargetPlatform.android, TargetPlatform.linux]) {
+        expect(PlatformCapabilities.canPushOn(true, platform), isFalse);
+      }
+    });
   });
 }

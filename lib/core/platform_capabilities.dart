@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
 
-/// What the device can do for the key screens. Android is the target the
-/// app is built for (A2); Linux and web run it for development and as a
-/// convenience, without the Android-only protections.
+/// What the device can do for the key screens and for notifications. Android
+/// is the target the app is built for (A2); Linux and web run it for
+/// development and as a convenience, without the Android-only protections.
 ///
 /// Each check takes `isWeb` and `platform` rather than reading them, because
 /// `kIsWeb` is a compile-time constant: a test could otherwise never reach
@@ -22,7 +22,16 @@ abstract final class PlatformCapabilities {
   static bool copySecretOn(bool isWeb, TargetPlatform platform) =>
       !isWeb && platform == TargetPlatform.android;
 
+  /// Push notifications of a new dispute. Only Android has what they need:
+  /// Firebase Cloud Messaging set up for this app, the notification channel
+  /// (`MainActivity.kt`) and the texts Android shows (`strings.xml`). Where
+  /// this is false nothing loads Firebase, and nothing offers notifications.
+  static bool canPushOn(bool isWeb, TargetPlatform platform) =>
+      !isWeb && platform == TargetPlatform.android;
+
   static bool get scanQr => scanQrOn(kIsWeb, defaultTargetPlatform);
 
   static bool get copySecret => copySecretOn(kIsWeb, defaultTargetPlatform);
+
+  static bool get canPush => canPushOn(kIsWeb, defaultTargetPlatform);
 }
