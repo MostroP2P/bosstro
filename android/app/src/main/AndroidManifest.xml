@@ -53,6 +53,16 @@
         <meta-data
             android:name="firebase_messaging_auto_init_enabled"
             android:value="false" />
+        <!-- What Android draws for a push that names no icon, as the new-dispute
+             push: the mascot's shape (tool/launcher_icon/build_sources.py), in
+             the app's accent. Without the icon it uses the launcher icon, of
+             which Android keeps only the outline. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
