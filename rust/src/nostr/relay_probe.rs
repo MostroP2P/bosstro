@@ -196,6 +196,11 @@ pub(crate) async fn force_reconnect(client: &Client, url: &str) {
     }
 }
 
+/// How long a relay marked `Connected` has to answer when the app resumes.
+/// Shorter than [`PROBE_TIMEOUT`]: here a wrong "dead" costs one reconnect of
+/// a relay that was only slow, and a long wait costs the solver stale lists.
+const RESUME_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+
 /// Reconnect now every relay that is `Disconnected`, and return how many
 /// there were.
 ///
@@ -208,15 +213,52 @@ pub(crate) async fn force_reconnect(client: &Client, url: &str) {
 /// connecting are left alone. All at once: each bounce waits its own grace,
 /// and one slow relay must not hold the others.
 pub(crate) async fn reconnect_disconnected_now(client: &Client) -> usize {
-    let stale: Vec<String> = client
-        .relays()
-        .await
-        .iter()
-        .filter(|(_, relay)| relay.status() == RelayStatus::Disconnected)
-        .map(|(url, _)| url.to_string())
-        .collect();
-    futures_util::future::join_all(stale.iter().map(|url| force_reconnect(client, url))).await;
-    stale.len()
+    let relays = client.relays().await;
+    let bounced = futures_util::future::join_all(relays.iter().map(|(url, relay)| async move {
+        // Read here, right before the bounce, not from a list made earlier:
+        // a relay whose retry woke meanwhile is connecting and is left to it.
+        if relay.status() != RelayStatus::Disconnected {
+            return false;
+        }
+        force_reconnect(client, url.as_str()).await;
+        true
+    }))
+    .await;
+    bounced.into_iter().filter(|bounced| *bounced).count()
+}
+
+/// Ask every relay that is `Connected` whether it still answers, reconnect
+/// now those that do not, and return how many there were.
+///
+/// For the resume path too. A socket the network dropped without a word (a
+/// NAT that forgot it, Wi-Fi left for mobile data) is still `Connected` to
+/// the SDK when the app returns, so [`reconnect_disconnected_now`] passes it
+/// over, and nothing arrives through it until the liveness probe's next
+/// round. All at once, each relay with its own deadline.
+pub(crate) async fn reconnect_unresponsive_now(client: &Client) -> usize {
+    reconnect_unresponsive_within(client, RESUME_PROBE_TIMEOUT).await
+}
+
+async fn reconnect_unresponsive_within(client: &Client, limit: Duration) -> usize {
+    let relays = client.relays().await;
+    let bounced = futures_util::future::join_all(relays.iter().map(|(url, relay)| async move {
+        if relay.status() != RelayStatus::Connected || probe_within(relay, limit).await {
+            return false;
+        }
+        // It may have dropped while it was asked: then its own task is
+        // already reconnecting, or the other half of the resume handles it.
+        if relay.status() != RelayStatus::Connected {
+            return false;
+        }
+        log::info!(
+            "[relay] resume: {} is connected and answers nothing, reconnecting",
+            display_relay(url.as_str())
+        );
+        force_reconnect(client, url.as_str()).await;
+        true
+    }))
+    .await;
+    bounced.into_iter().filter(|bounced| *bounced).count()
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
@@ -224,10 +266,29 @@ pub(crate) mod tests {
     use super::*;
     use nostr_sdk::prelude::MockRelay;
 
-    /// A relay whose first connection is cut half a second after it is made,
-    /// as the OS cuts a background app's sockets. Later ones stay. A proxy in
-    /// front of a mock relay; the relay is returned to be kept alive.
+    /// What the proxy does with the first connection it gets, half a second
+    /// after it is made. Later connections are passed on untouched.
+    #[derive(Clone, Copy)]
+    enum First {
+        /// Cut, as the OS cuts a background app's sockets.
+        Dropped,
+        /// Kept open and passed on no more, as a socket the network forgot.
+        Silenced,
+    }
+
+    /// A relay whose first connection is cut half a second after it is made.
     pub(crate) async fn relay_that_drops_the_first_connection() -> String {
+        proxied_relay(First::Dropped).await
+    }
+
+    /// A relay whose first connection stays open and goes silent half a
+    /// second after it is made.
+    pub(crate) async fn relay_that_silences_the_first_connection() -> String {
+        proxied_relay(First::Silenced).await
+    }
+
+    /// A proxy in front of a mock relay, which lives as long as the proxy.
+    async fn proxied_relay(first: First) -> String {
         let relay = MockRelay::run().await.expect("mock relay");
         let upstream = relay
             .url()
@@ -240,19 +301,26 @@ pub(crate) mod tests {
         let url = format!("ws://{}", listener.local_addr().unwrap());
         tokio::spawn(async move {
             let _relay = relay;
-            let mut first = true;
+            let mut is_first = true;
             while let Ok((mut inbound, _)) = listener.accept().await {
-                let drop_it = std::mem::replace(&mut first, false);
+                let fate = std::mem::replace(&mut is_first, false).then_some(first);
                 let upstream = upstream.clone();
                 tokio::spawn(async move {
                     let Ok(mut outbound) = tokio::net::TcpStream::connect(&upstream).await else {
                         return;
                     };
                     let copy = tokio::io::copy_bidirectional(&mut inbound, &mut outbound);
-                    if drop_it {
-                        let _ = tokio::time::timeout(Duration::from_millis(500), copy).await;
-                    } else {
-                        let _ = copy.await;
+                    match fate {
+                        None => {
+                            let _ = copy.await;
+                        }
+                        Some(fate) => {
+                            let _ = tokio::time::timeout(Duration::from_millis(500), copy).await;
+                            if matches!(fate, First::Silenced) {
+                                // Both sockets stay open; nothing crosses.
+                                std::future::pending::<()>().await;
+                            }
+                        }
                     }
                 });
             }
@@ -330,6 +398,57 @@ pub(crate) mod tests {
     }
 
     const NOW: i64 = 1_800_000_000;
+
+    /// The socket the network forgot: the SDK still calls it connected, so
+    /// only asking it finds out.
+    #[tokio::test]
+    async fn a_connected_relay_that_answers_nothing_is_reconnected_on_resume() {
+        // Arrange
+        let url = relay_that_silences_the_first_connection().await;
+        let client = Client::new();
+        client.add_relay(&url).await.expect("add relay");
+        client
+            .try_connect_relay(&url, Duration::from_secs(5))
+            .await
+            .expect("connect");
+        tokio::time::sleep(Duration::from_millis(700)).await;
+        let relay = client
+            .relay(&url)
+            .await
+            .expect("relay")
+            .expect("known relay");
+        assert_eq!(relay.status(), RelayStatus::Connected, "silent, not dropped");
+        assert_eq!(reconnect_disconnected_now(&client).await, 0);
+
+        // Act
+        let woken = reconnect_unresponsive_within(&client, Duration::from_millis(800)).await;
+
+        // Assert: it is connected again, on a connection that answers.
+        assert_eq!(woken, 1);
+        assert!(connected_within(&client, &url, Duration::from_secs(3)).await);
+        assert!(probe_within(&relay, Duration::from_secs(3)).await);
+    }
+
+    #[tokio::test]
+    async fn a_connected_relay_that_answers_is_left_alone_on_resume() {
+        // Arrange
+        let mock = MockRelay::run().await.expect("mock relay");
+        let url = mock.url().await;
+        let client = Client::new();
+        client.add_relay(&url).await.expect("add relay");
+        client
+            .try_connect_relay(&url, Duration::from_secs(5))
+            .await
+            .expect("connect");
+
+        // Act
+        let woken = reconnect_unresponsive_now(&client).await;
+
+        // Assert
+        assert_eq!(woken, 0);
+        let relay = client.relay(&url).await.expect("relay").expect("known");
+        assert_eq!(relay.status(), RelayStatus::Connected);
+    }
 
     #[tokio::test]
     async fn a_healthy_relay_answers_the_probe() {

@@ -9,9 +9,13 @@
 //! pass, in order:
 //!
 //! 1. **Reconnect.** Every relay found disconnected is bounced, so it
-//!    connects now ([`super::relay_probe::reconnect_disconnected_now`]). Then
-//!    `connect()` starts the relays that have no connection task at all, and
-//!    waits a bounded time for the handshakes.
+//!    connects now ([`super::relay_probe::reconnect_disconnected_now`]), and
+//!    every relay still marked connected is asked whether it answers, and
+//!    bounced when it does not
+//!    ([`super::relay_probe::reconnect_unresponsive_now`]): the network can
+//!    drop a socket without the SDK hearing of it. Then `connect()` starts
+//!    the relays that have no connection task at all, and the pass waits a
+//!    bounded time for the first relay to be connected.
 //! 2. **Subscriptions.** Whatever a relay that is up still lacks is issued
 //!    again ([`super::live_subs::LiveSubs::repair_all`]). The relays still
 //!    connecting get theirs from the repair task as they connect.
@@ -28,38 +32,63 @@ use nostr_sdk::prelude::{Client, RelayStatus};
 
 use super::live_subs::LiveSubs;
 
-/// How long a pass waits for the relays to connect before it reports what it
+/// How long a pass waits for a relay to connect before it reports what it
 /// found. Long enough for a handshake on a radio that just woke; short
 /// enough that a resume with no network does not hold whoever waits for it.
 const CONNECT_WAIT: Duration = Duration::from_secs(5);
 
+/// How often the wait looks at the relays.
+const CONNECT_POLL: Duration = Duration::from_millis(50);
+
 /// One pass over `client`. Returns whether a relay is connected at its end.
 pub(crate) async fn pass(client: &Client, subs: &LiveSubs) -> bool {
-    let woken = super::relay_probe::reconnect_disconnected_now(client).await;
-    if woken > 0 {
-        log::info!("[relay] resync: reconnecting {woken} dropped relay(s) now");
+    let (dropped, silent) = futures_util::future::join(
+        super::relay_probe::reconnect_disconnected_now(client),
+        super::relay_probe::reconnect_unresponsive_now(client),
+    )
+    .await;
+    if dropped + silent > 0 {
+        log::info!("[relay] resync: reconnecting now {dropped} dropped, {silent} silent relay(s)");
     }
-    client.connect().and_wait(CONNECT_WAIT).await;
+    client.connect().await;
+    wait_for_a_relay(client).await;
 
     let repaired = subs.repair_all(client).await;
     if repaired > 0 {
         log::info!("[relay] resync: repaired {repaired} subscription(s)");
     }
 
-    let online = client
-        .relays()
-        .await
-        .values()
-        .any(|relay| relay.status() == RelayStatus::Connected);
+    let online = any_connected(client).await;
     log::info!("[relay] resync: done, online={online}");
     online
 }
 
-/// One pass at a time, and none for a call a running pass already serves.
+async fn any_connected(client: &Client) -> bool {
+    client
+        .relays()
+        .await
+        .values()
+        .any(|relay| relay.status() == RelayStatus::Connected)
+}
+
+/// Wait until one relay is connected, at most [`CONNECT_WAIT`]. The first
+/// one, not all of them (`Connect::and_wait`): one unreachable relay would
+/// hold every pass for the whole wait. The relays that connect later get
+/// their subscriptions from the repair task.
+async fn wait_for_a_relay(client: &Client) {
+    let mut waited = Duration::ZERO;
+    while waited < CONNECT_WAIT && !any_connected(client).await {
+        crate::rt::time::sleep(CONNECT_POLL).await;
+        waited += CONNECT_POLL;
+    }
+}
+
+/// One pass at a time, and none for a call that a pass started after it
+/// already serves.
 pub(crate) struct SingleFlight<T> {
     lock: tokio::sync::Mutex<()>,
-    /// Passes finished so far.
-    generation: AtomicU64,
+    /// Passes started so far. Written under `lock`.
+    started: AtomicU64,
     last: std::sync::Mutex<Option<T>>,
 }
 
@@ -67,34 +96,38 @@ impl<T: Clone> SingleFlight<T> {
     pub(crate) const fn new() -> Self {
         Self {
             lock: tokio::sync::Mutex::const_new(()),
-            generation: AtomicU64::new(0),
+            started: AtomicU64::new(0),
             last: std::sync::Mutex::new(None),
         }
     }
 
-    /// Runs `pass`, or waits for the one in progress and returns its result.
-    /// The flag says which: `true` when this call ran no pass of its own.
+    /// Runs `pass`, or returns the result of one that started after this
+    /// call was made. The flag says which: `true` when this call ran no pass
+    /// of its own.
     ///
-    /// A pass that finished while this call waited for the lock started
-    /// after the call was made, so its result is as fresh as a new pass
-    /// would be: a resume reported twice costs one pass.
+    /// Only a pass that **started** after the call may stand for it: it saw
+    /// the relays as they were after the call. A pass already running when
+    /// the call arrives may have looked at them before whatever the call is
+    /// about (the app left again and came back while it waited), so the call
+    /// waits for it to end and then runs its own. Calls that waited together
+    /// share that one.
     pub(crate) async fn run<F, Fut>(&self, pass: F) -> (T, bool)
     where
         F: FnOnce() -> Fut,
         Fut: Future<Output = T>,
     {
-        let seen = self.generation.load(Ordering::Acquire);
+        let seen = self.started.load(Ordering::Acquire);
         let _guard = self.lock.lock().await;
-        if self.generation.load(Ordering::Acquire) != seen {
+        if self.started.load(Ordering::Acquire) != seen {
             if let Some(last) = self.last.lock().ok().and_then(|last| last.clone()) {
                 return (last, true);
             }
         }
+        self.started.fetch_add(1, Ordering::Release);
         let outcome = pass().await;
         if let Ok(mut last) = self.last.lock() {
             *last = Some(outcome.clone());
         }
-        self.generation.fetch_add(1, Ordering::Release);
         (outcome, false)
     }
 }
@@ -124,10 +157,11 @@ mod tests {
         }
     }
 
-    /// Calls that arrive while a pass runs do not start another: they wait
-    /// for it and return its result.
+    /// A call that arrives while a pass runs is not served by it: that pass
+    /// looked at the relays before the call. The calls that waited run one
+    /// more pass between them.
     #[tokio::test]
-    async fn concurrent_calls_share_the_running_pass() {
+    async fn calls_made_during_a_pass_share_one_pass_that_starts_after_them() {
         let flight = Arc::new(SingleFlight::new());
         let runs = Arc::new(AtomicU32::new(0));
         let (release_tx, release_rx) = tokio::sync::oneshot::channel::<()>();
@@ -166,14 +200,35 @@ mod tests {
         release_tx.send(()).unwrap();
 
         assert_eq!(first.await.unwrap(), (3, false));
+        let mut own = 0;
         for follower in followers {
-            assert_eq!(
-                follower.await.unwrap(),
-                (3, true),
-                "the running pass's result"
-            );
+            let (outcome, coalesced) = follower.await.unwrap();
+            assert_eq!(outcome, 99, "never the pass that was already running");
+            if !coalesced {
+                own += 1;
+            }
         }
-        assert_eq!(runs.load(Ordering::SeqCst), 1, "one pass for four calls");
+        assert_eq!(own, 1, "one of the three ran the pass the others share");
+        assert_eq!(runs.load(Ordering::SeqCst), 2, "two passes for four calls");
+    }
+
+    /// One unreachable relay does not hold the pass for the whole wait.
+    #[tokio::test]
+    async fn a_pass_does_not_wait_for_a_relay_that_cannot_be_reached() {
+        // Arrange: a healthy relay, and a port nothing listens on.
+        let relay = MockRelay::run().await.unwrap();
+        let url = relay.url().await;
+        let client = Client::new();
+        client.add_relay(&url).await.unwrap();
+        client.add_relay("ws://127.0.0.1:1").await.unwrap();
+        let started = tokio::time::Instant::now();
+
+        // Act
+        let online = pass(&client, &LiveSubs::default()).await;
+
+        // Assert
+        assert!(online);
+        assert!(started.elapsed() < CONNECT_WAIT - Duration::from_secs(1));
     }
 
     /// A relay the OS cut is back when the pass ends, not when its retry

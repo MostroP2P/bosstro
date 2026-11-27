@@ -257,7 +257,8 @@ pub struct ResyncOutcome {
 /// Bring the core back in step with the relays after the app was in the
 /// background, where Android freezes the process and its sockets die: the
 /// relays found disconnected are reconnected now rather than at their next
-/// retry, and every live subscription a relay lacks is issued again
+/// retry, so are those still marked connected that no longer answer, and
+/// every live subscription a relay lacks is issued again
 /// ([`crate::nostr::resync`]). The relays then send what they hold, so the
 /// streams of disputes, answers and chats deliver what was missed. The pass
 /// starts by telling the dispute lists to read again, for what changed with
