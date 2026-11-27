@@ -1,7 +1,7 @@
 //! Asking a `Connected` relay whether it is still there. From MostroP2P/app's
-//! `nostr/relay_probe.rs`, trimmed: its resume nudge
-//! (`reconnect_disconnected_now`) waits for a resume path, which Bosstro does
-//! not have yet. The issue and PR numbers below are MostroP2P/app's.
+//! `nostr/relay_probe.rs`, with its resume nudge
+//! ([`reconnect_disconnected_now`], used by [`super::resync`]). The issue and
+//! PR numbers below are MostroP2P/app's.
 //!
 //! Every recovery path in this client is keyed on an **observed** change:
 //! a relay transitioning to `Disconnected`, the pool going `Online`, a relay
@@ -196,10 +196,138 @@ pub(crate) async fn force_reconnect(client: &Client, url: &str) {
     }
 }
 
+/// Reconnect now every relay that is `Disconnected`, and return how many
+/// there were.
+///
+/// For the resume path. While the app is in the background the OS cuts every
+/// socket, and each relay's connection task then sleeps its retry interval
+/// (10 s, growing to 60 s after repeated failures) before it tries again.
+/// `Client::connect` cannot shorten that: it only starts relays that have no
+/// connection task. Bouncing the relay ([`force_reconnect`]) replaces the
+/// sleeping task with one that connects now; relays connected or already
+/// connecting are left alone. All at once: each bounce waits its own grace,
+/// and one slow relay must not hold the others.
+pub(crate) async fn reconnect_disconnected_now(client: &Client) -> usize {
+    let stale: Vec<String> = client
+        .relays()
+        .await
+        .iter()
+        .filter(|(_, relay)| relay.status() == RelayStatus::Disconnected)
+        .map(|(url, _)| url.to_string())
+        .collect();
+    futures_util::future::join_all(stale.iter().map(|url| force_reconnect(client, url))).await;
+    stale.len()
+}
+
 #[cfg(all(test, not(target_arch = "wasm32")))]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use nostr_sdk::prelude::MockRelay;
+
+    /// A relay whose first connection is cut half a second after it is made,
+    /// as the OS cuts a background app's sockets. Later ones stay. A proxy in
+    /// front of a mock relay; the relay is returned to be kept alive.
+    pub(crate) async fn relay_that_drops_the_first_connection() -> String {
+        let relay = MockRelay::run().await.expect("mock relay");
+        let upstream = relay
+            .url()
+            .await
+            .to_string()
+            .trim_start_matches("ws://")
+            .trim_end_matches('/')
+            .to_string();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("ws://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            let _relay = relay;
+            let mut first = true;
+            while let Ok((mut inbound, _)) = listener.accept().await {
+                let drop_it = std::mem::replace(&mut first, false);
+                let upstream = upstream.clone();
+                tokio::spawn(async move {
+                    let Ok(mut outbound) = tokio::net::TcpStream::connect(&upstream).await else {
+                        return;
+                    };
+                    let copy = tokio::io::copy_bidirectional(&mut inbound, &mut outbound);
+                    if drop_it {
+                        let _ = tokio::time::timeout(Duration::from_millis(500), copy).await;
+                    } else {
+                        let _ = copy.await;
+                    }
+                });
+            }
+        });
+        url
+    }
+
+    /// A client whose only relay was connected and then dropped.
+    pub(crate) async fn dropped_relay(url: &str) -> Client {
+        let client = Client::new();
+        client.add_relay(url).await.expect("add relay");
+        client
+            .try_connect_relay(url, Duration::from_secs(5))
+            .await
+            .expect("connect");
+        let relay = client
+            .relay(url)
+            .await
+            .expect("relay")
+            .expect("known relay");
+        for _ in 0..50 {
+            if relay.status() == RelayStatus::Disconnected {
+                return client;
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        panic!("the relay never dropped: {}", relay.status());
+    }
+
+    async fn connected_within(client: &Client, url: &str, limit: Duration) -> bool {
+        let relay = client
+            .relay(url)
+            .await
+            .expect("relay")
+            .expect("known relay");
+        let deadline = tokio::time::Instant::now() + limit;
+        while tokio::time::Instant::now() < deadline {
+            if relay.status() == RelayStatus::Connected {
+                return true;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        false
+    }
+
+    /// Pins the SDK behaviour the nudge works around: `Client::connect` does
+    /// nothing for a relay whose connection task is asleep in its retry
+    /// interval (10 s and up), which is every relay the OS cut while the app
+    /// was in the background.
+    #[tokio::test]
+    async fn connect_does_not_wake_a_relay_asleep_in_its_retry() {
+        // Arrange
+        let url = relay_that_drops_the_first_connection().await;
+        let client = dropped_relay(&url).await;
+
+        // Act
+        client.connect().await;
+
+        // Assert
+        assert!(!connected_within(&client, &url, Duration::from_secs(3)).await);
+    }
+
+    #[tokio::test]
+    async fn a_dropped_relay_reconnects_at_once_on_resume() {
+        // Arrange
+        let url = relay_that_drops_the_first_connection().await;
+        let client = dropped_relay(&url).await;
+
+        // Act
+        let woken = reconnect_disconnected_now(&client).await;
+
+        // Assert
+        assert_eq!(woken, 1);
+        assert!(connected_within(&client, &url, Duration::from_secs(3)).await);
+    }
 
     const NOW: i64 = 1_800_000_000;
 

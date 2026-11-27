@@ -239,6 +239,42 @@ pub async fn on_relay_status_changed() -> Result<RelayStatusStream> {
     })
 }
 
+/// What one [`resync`] found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResyncOutcome {
+    /// A relay was connected when the pass ended.
+    pub online: bool,
+    /// This call ran no pass of its own: one already running when it arrived
+    /// ended meanwhile, and this is its result.
+    pub coalesced: bool,
+}
+
+/// Bring the core back in step with the relays after the app was in the
+/// background, where Android freezes the process and its sockets die: the
+/// relays found disconnected are reconnected now rather than at their next
+/// retry, and every live subscription a relay lacks is issued again
+/// ([`crate::nostr::resync`]). The relays then send what they hold, so the
+/// streams of disputes, answers and chats deliver what was missed.
+///
+/// Safe to call at any time and more than once: calls made while a pass runs
+/// share it, and a pass over a healthy pool changes nothing. Before the pool
+/// exists it does nothing and reports offline. It waits at most a few
+/// seconds for the relays.
+pub async fn resync() -> ResyncOutcome {
+    static FLIGHT: crate::nostr::resync::SingleFlight<bool> =
+        crate::nostr::resync::SingleFlight::new();
+    let (online, coalesced) = FLIGHT
+        .run(|| async {
+            let Ok(pool) = pool() else {
+                log::info!("[relay] resync: no relay pool yet, nothing to do");
+                return false;
+            };
+            crate::nostr::resync::pass(&pool.client(), crate::nostr::live_subs::live_subs()).await
+        })
+        .await;
+    ResyncOutcome { online, coalesced }
+}
+
 /// Wrapper so flutter_rust_bridge can hand Dart a pull-based stream.
 pub struct ConnectionStateStream {
     rx: tokio::sync::broadcast::Receiver<ConnectionState>,

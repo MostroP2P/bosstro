@@ -552,6 +552,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ResolvedAs dco_decode_resolved_as(dynamic raw);
 
   @protected
+  ResyncOutcome dco_decode_resync_outcome(dynamic raw);
+
+  @protected
   SolverKeyError dco_decode_solver_key_error(dynamic raw);
 
   @protected
@@ -1187,6 +1190,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ResolvedAs sse_decode_resolved_as(SseDeserializer deserializer);
+
+  @protected
+  ResyncOutcome sse_decode_resync_outcome(SseDeserializer deserializer);
 
   @protected
   SolverKeyError sse_decode_solver_key_error(SseDeserializer deserializer);
@@ -1996,6 +2002,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_resolved_as(ResolvedAs self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_resync_outcome(ResyncOutcome self, SseSerializer serializer);
 
   @protected
   void sse_encode_solver_key_error(
