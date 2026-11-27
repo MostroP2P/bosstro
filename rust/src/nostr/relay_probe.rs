@@ -27,7 +27,10 @@
 //! would have reconnected it, so a silence timer cannot be the signal.
 
 use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
+
+use crate::rt::time::Instant;
 
 use nostr_sdk::prelude::{Client, EventId, Filter, Relay, RelayStatus};
 
@@ -181,6 +184,7 @@ async fn probe_within(relay: &Relay, limit: Duration) -> bool {
 /// the measurement found it: deaf, with the missed events never asked for
 /// again. It is the one part of MostroP2P/app#324 that was right.
 pub(crate) async fn force_reconnect(client: &Client, url: &str) {
+    bounces().lock().unwrap_or_else(|e| e.into_inner()).insert(url.to_string(), Instant::now());
     if let Err(e) = client.disconnect_relay(url).await {
         log::warn!(
             "[relay] liveness probe: disconnect of {} failed: {e}",
@@ -194,6 +198,42 @@ pub(crate) async fn force_reconnect(client: &Client, url: &str) {
             display_relay(url)
         );
     }
+}
+
+/// When each relay was last bounced, by [`force_reconnect`].
+fn bounces() -> &'static Mutex<HashMap<String, Instant>> {
+    static BOUNCES: OnceLock<Mutex<HashMap<String, Instant>>> = OnceLock::new();
+    BOUNCES.get_or_init(Mutex::default)
+}
+
+/// Whether `url` was bounced at or after `since`.
+fn bounced_since(url: &str, since: Instant) -> bool {
+    bounces()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get(url)
+        .is_some_and(|at| *at >= since)
+}
+
+/// [`force_reconnect`] for a relay whose probe, sent at `asked`, went
+/// unanswered — unless the relay was bounced since. Returns whether it
+/// bounced.
+///
+/// Two things probe: the liveness monitor, with a long deadline, and the
+/// resume, with a short one. Both may be asking the same dead socket; the
+/// first to give up reconnects the relay, and the other's question, which
+/// left on the old socket, then says nothing about the new one. Bouncing
+/// again would cut a healthy connection under whatever is being sent.
+pub(crate) async fn reconnect_unanswered(client: &Client, url: &str, asked: Instant) -> bool {
+    if bounced_since(url, asked) {
+        log::info!(
+            "[relay] {} was reconnected while it was asked; left alone",
+            display_relay(url)
+        );
+        return false;
+    }
+    force_reconnect(client, url).await;
+    true
 }
 
 /// How long a relay marked `Connected` has to answer when the app resumes.
@@ -242,20 +282,29 @@ pub(crate) async fn reconnect_unresponsive_now(client: &Client) -> usize {
 async fn reconnect_unresponsive_within(client: &Client, limit: Duration) -> usize {
     let relays = client.relays().await;
     let bounced = futures_util::future::join_all(relays.iter().map(|(url, relay)| async move {
-        if relay.status() != RelayStatus::Connected || probe_within(relay, limit).await {
-            return false;
-        }
-        // It may have dropped while it was asked: then its own task is
-        // already reconnecting, or the other half of the resume handles it.
         if relay.status() != RelayStatus::Connected {
             return false;
         }
+        let asked = Instant::now();
+        let answered = probe_within(relay, limit).await;
+        // Using the socket may be what shows it dead, and the relay is then
+        // `Disconnected`, asleep in its retry. The probe does not say so:
+        // measured, a fetch whose relay drops under it ends `Ok` and empty,
+        // which reads as an answer. And [`reconnect_disconnected_now`],
+        // which runs beside this, saw the relay `Connected` and passed it
+        // over. So the status decides, after the probe: still connected and
+        // answered is healthy; connected and silent, or disconnected, is
+        // reconnected now; already connecting again is left to it.
+        match relay.status() {
+            RelayStatus::Connected if answered => return false,
+            RelayStatus::Connected | RelayStatus::Disconnected => {}
+            _ => return false,
+        }
         log::info!(
-            "[relay] resume: {} is connected and answers nothing, reconnecting",
+            "[relay] resume: {} answers nothing, reconnecting",
             display_relay(url.as_str())
         );
-        force_reconnect(client, url.as_str()).await;
-        true
+        reconnect_unanswered(client, url.as_str(), asked).await
     }))
     .await;
     bounced.into_iter().filter(|bounced| *bounced).count()
@@ -274,6 +323,9 @@ pub(crate) mod tests {
         Dropped,
         /// Kept open and passed on no more, as a socket the network forgot.
         Silenced,
+        /// Silenced, and cut half a second later: a socket that shows itself
+        /// dead only when it is used.
+        SilencedThenDropped,
     }
 
     /// A relay whose first connection is cut half a second after it is made.
@@ -316,9 +368,13 @@ pub(crate) mod tests {
                         }
                         Some(fate) => {
                             let _ = tokio::time::timeout(Duration::from_millis(500), copy).await;
-                            if matches!(fate, First::Silenced) {
+                            match fate {
+                                First::Dropped => {}
                                 // Both sockets stay open; nothing crosses.
-                                std::future::pending::<()>().await;
+                                First::Silenced => std::future::pending::<()>().await,
+                                First::SilencedThenDropped => {
+                                    tokio::time::sleep(Duration::from_millis(500)).await;
+                                }
                             }
                         }
                     }
@@ -427,6 +483,59 @@ pub(crate) mod tests {
         assert_eq!(woken, 1);
         assert!(connected_within(&client, &url, Duration::from_secs(3)).await);
         assert!(probe_within(&relay, Duration::from_secs(3)).await);
+    }
+
+    /// The socket turns out dead while it is asked: the relay is
+    /// `Disconnected` by the time the probe gives up, and the half of the
+    /// resume that reconnects such relays has already passed it over.
+    #[tokio::test]
+    async fn a_relay_that_drops_while_it_is_asked_is_reconnected_on_resume() {
+        // Arrange: silent from 500 ms, cut at 1000 ms.
+        let url = proxied_relay(First::SilencedThenDropped).await;
+        let client = Client::new();
+        client.add_relay(&url).await.expect("add relay");
+        client
+            .try_connect_relay(&url, Duration::from_secs(5))
+            .await
+            .expect("connect");
+        tokio::time::sleep(Duration::from_millis(650)).await;
+        let relay = client.relay(&url).await.expect("relay").expect("known");
+        assert_eq!(relay.status(), RelayStatus::Connected, "silent, not cut yet");
+
+        // Act: asked while still connected; cut before the probe gives up.
+        let woken = reconnect_unresponsive_within(&client, Duration::from_millis(1200)).await;
+
+        // Assert: back at once, not after the ten seconds of its retry.
+        assert_eq!(woken, 1);
+        assert!(connected_within(&client, &url, Duration::from_secs(3)).await);
+    }
+
+    /// The monitor and the resume asked the same dead socket: whoever gives
+    /// up second must not cut the connection the first one restored.
+    #[tokio::test]
+    async fn a_relay_reconnected_while_it_was_asked_is_not_bounced_again() {
+        // Arrange
+        let mock = MockRelay::run().await.expect("mock relay");
+        let url = mock.url().await.to_string();
+        let client = Client::new();
+        client.add_relay(&url).await.expect("add relay");
+        client
+            .try_connect_relay(&url, Duration::from_secs(5))
+            .await
+            .expect("connect");
+        let asked = Instant::now();
+        force_reconnect(&client, &url).await;
+        assert!(connected_within(&client, &url, Duration::from_secs(3)).await);
+
+        // Act: the slower probe, sent at `asked`, gives up now.
+        let bounced = reconnect_unanswered(&client, &url, asked).await;
+
+        // Assert
+        assert!(!bounced);
+        let relay = client.relay(&url).await.expect("relay").expect("known");
+        assert_eq!(relay.status(), RelayStatus::Connected);
+        // A probe sent after that bounce is another matter.
+        assert!(reconnect_unanswered(&client, &url, Instant::now()).await);
     }
 
     #[tokio::test]

@@ -37,6 +37,11 @@ use super::live_subs::LiveSubs;
 /// enough that a resume with no network does not hold whoever waits for it.
 const CONNECT_WAIT: Duration = Duration::from_secs(5);
 
+/// How long a pass gives the repair of the subscriptions. Each REQ a relay
+/// does not take costs the repair ten seconds, one after another; what is
+/// left when this runs out is the repair task's, as each relay connects.
+const REPAIR_WAIT: Duration = Duration::from_secs(10);
+
 /// How often the wait looks at the relays.
 const CONNECT_POLL: Duration = Duration::from_millis(50);
 
@@ -53,9 +58,10 @@ pub(crate) async fn pass(client: &Client, subs: &LiveSubs) -> bool {
     client.connect().await;
     wait_for_a_relay(client).await;
 
-    let repaired = subs.repair_all(client).await;
-    if repaired > 0 {
-        log::info!("[relay] resync: repaired {repaired} subscription(s)");
+    match crate::rt::time::timeout(REPAIR_WAIT, subs.repair_all(client)).await {
+        Ok(0) => {}
+        Ok(repaired) => log::info!("[relay] resync: repaired {repaired} subscription(s)"),
+        Err(_) => log::warn!("[relay] resync: the repair of the subscriptions was cut short"),
     }
 
     let online = any_connected(client).await;
@@ -89,7 +95,8 @@ pub(crate) struct SingleFlight<T> {
     lock: tokio::sync::Mutex<()>,
     /// Passes started so far. Written under `lock`.
     started: AtomicU64,
-    last: std::sync::Mutex<Option<T>>,
+    /// The last pass that ended, by its number, and its result.
+    last: std::sync::Mutex<Option<(u64, T)>>,
 }
 
 impl<T: Clone> SingleFlight<T> {
@@ -118,15 +125,18 @@ impl<T: Clone> SingleFlight<T> {
     {
         let seen = self.started.load(Ordering::Acquire);
         let _guard = self.lock.lock().await;
-        if self.started.load(Ordering::Acquire) != seen {
-            if let Some(last) = self.last.lock().ok().and_then(|last| last.clone()) {
+        // By its number, not by `started` having moved: a pass that started
+        // after the call and never ended (it panicked, its future was
+        // dropped) left no result, and the older one still stored is not it.
+        if let Some((number, last)) = self.last.lock().ok().and_then(|last| last.clone()) {
+            if number > seen {
                 return (last, true);
             }
         }
-        self.started.fetch_add(1, Ordering::Release);
+        let number = self.started.fetch_add(1, Ordering::AcqRel) + 1;
         let outcome = pass().await;
         if let Ok(mut last) = self.last.lock() {
-            *last = Some(outcome.clone());
+            *last = Some((number, outcome.clone()));
         }
         (outcome, false)
     }
@@ -182,10 +192,16 @@ mod tests {
         };
         started_rx.await.unwrap();
 
+        // Each follower says so right before it calls: nothing awaits
+        // between that and its wait for the lock, so once the three have
+        // spoken and this task runs again, the three are waiting.
+        let (arrived_tx, mut arrived_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
         let followers: Vec<_> = (0..3)
             .map(|_| {
                 let (flight, runs) = (flight.clone(), runs.clone());
+                let arrived = arrived_tx.clone();
                 tokio::spawn(async move {
+                    let _ = arrived.send(());
                     flight
                         .run(|| async move {
                             runs.fetch_add(1, Ordering::SeqCst);
@@ -195,7 +211,9 @@ mod tests {
                 })
             })
             .collect();
-        // Let the followers reach the lock before the first pass ends.
+        for _ in 0..3 {
+            arrived_rx.recv().await.unwrap();
+        }
         tokio::task::yield_now().await;
         release_tx.send(()).unwrap();
 
@@ -210,6 +228,38 @@ mod tests {
         }
         assert_eq!(own, 1, "one of the three ran the pass the others share");
         assert_eq!(runs.load(Ordering::SeqCst), 2, "two passes for four calls");
+    }
+
+    /// A pass that started after a call and left no result does not make
+    /// that call take the result of an older one.
+    #[tokio::test]
+    async fn a_pass_that_never_ended_does_not_pass_off_an_older_result() {
+        let flight = Arc::new(SingleFlight::new());
+        assert_eq!(flight.run(|| async { 1 }).await, (1, false));
+
+        // A pass starts and is dropped before it ends.
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel::<()>();
+        let abandoned = {
+            let flight = flight.clone();
+            tokio::spawn(async move {
+                flight
+                    .run(|| async move {
+                        let _ = started_tx.send(());
+                        std::future::pending::<i32>().await
+                    })
+                    .await
+            })
+        };
+        started_rx.await.unwrap();
+        // A call made while it runs, which waits for the lock.
+        let waiting = {
+            let flight = flight.clone();
+            tokio::spawn(async move { flight.run(|| async { 2 }).await })
+        };
+        tokio::task::yield_now().await;
+        abandoned.abort();
+
+        assert_eq!(waiting.await.unwrap(), (2, false), "its own pass, not 1");
     }
 
     /// One unreachable relay does not hold the pass for the whole wait.

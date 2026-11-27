@@ -410,6 +410,7 @@ impl RelayPool {
                     // never answers must not be re-asked on the next tick.
                     liveness.write().await.record_probe(&url, now);
 
+                    let asked = crate::rt::time::Instant::now();
                     if relay_probe::probe_once(&sdk_relay).await {
                         continue;
                     }
@@ -418,7 +419,9 @@ impl RelayPool {
                          delivering; reconnecting it",
                         display_relay(&url)
                     );
-                    relay_probe::force_reconnect(&client, &url).await;
+                    // Unless the resume reconnected it meanwhile: this probe
+                    // then left on the socket that is gone.
+                    relay_probe::reconnect_unanswered(&client, &url, asked).await;
                 }
             }
         });

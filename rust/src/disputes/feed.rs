@@ -737,6 +737,13 @@ pub(crate) async fn memory_rows(node: &str, status: DisputeStatus) -> Vec<Disput
 mod tests {
     use super::*;
 
+    use crate::disputes::event::tests::{mostrod_event, DISPUTE_ID};
+    use nostr_sdk::local_relay::{LocalRelayBuilder, MockRelay, RateLimit};
+    use nostr_sdk::prelude::Keys;
+    use std::time::Duration;
+
+    const OTHER_ID: &str = "1f2e3d4c-5b6a-4978-8695-a4b3c2d1e0f9";
+
     /// The update of a resume names no dispute, which every reader takes as
     /// "read again".
     #[tokio::test]
@@ -749,20 +756,22 @@ mod tests {
         announce_reread_of(node.clone());
 
         // Assert
-        let update = loop {
-            let update = rx.recv().await.expect("an update");
-            if update.mostro_pubkey == node {
-                break update;
+        let update = tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                match rx.recv().await {
+                    Ok(update) if update.mostro_pubkey == node => break update,
+                    // Another test's update, or so many of them that this
+                    // reader fell behind and may have missed its own: then
+                    // the timeout says so.
+                    Ok(_) | Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Closed) => panic!("the channel closed"),
+                }
             }
-        };
+        })
+        .await
+        .expect("the update of the reread");
         assert!(update.dispute.is_none());
     }
-    use crate::disputes::event::tests::{mostrod_event, DISPUTE_ID};
-    use nostr_sdk::local_relay::{LocalRelayBuilder, MockRelay, RateLimit};
-    use nostr_sdk::prelude::Keys;
-    use std::time::Duration;
-
-    const OTHER_ID: &str = "1f2e3d4c-5b6a-4978-8695-a4b3c2d1e0f9";
 
     async fn connected_client(relay: &MockRelay) -> Arc<Client> {
         let url = relay.url().await;

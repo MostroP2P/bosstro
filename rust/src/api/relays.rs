@@ -249,8 +249,8 @@ pub async fn on_relay_status_changed() -> Result<RelayStatusStream> {
 pub struct ResyncOutcome {
     /// A relay was connected when the pass ended.
     pub online: bool,
-    /// This call ran no pass of its own: one already running when it arrived
-    /// ended meanwhile, and this is its result.
+    /// This call ran no pass of its own: another call's pass started after
+    /// this one was made, and this is its result.
     pub coalesced: bool,
 }
 
@@ -264,10 +264,16 @@ pub struct ResyncOutcome {
 /// starts by telling the dispute lists to read again, for what changed with
 /// time alone.
 ///
-/// Safe to call at any time and more than once: calls made while a pass runs
-/// share it, and a pass over a healthy pool changes nothing. Before the pool
-/// exists it does nothing and reports offline. It waits at most a few
-/// seconds for the relays.
+/// Safe to call at any time and more than once. One pass runs at a time; a
+/// call made while one runs waits for it to end and then gets a pass that
+/// started after the call, its own or one shared with the calls that waited
+/// with it. A pass over a healthy pool changes nothing. Before the pool
+/// exists it does nothing and reports offline.
+///
+/// A pass over healthy relays takes well under a second. Each of its waits
+/// is bounded (a relay that does not answer, no relay connecting, a
+/// subscription a relay does not take), about twenty seconds in all at
+/// worst. Nothing has to wait for it.
 pub async fn resync() -> ResyncOutcome {
     static FLIGHT: crate::nostr::resync::SingleFlight<bool> =
         crate::nostr::resync::SingleFlight::new();
