@@ -24,49 +24,16 @@
 //! refuses for an origin it does not list (CORS): the wake fails and is
 //! logged like any other.
 //!
-//! A debug build reads [`TEST_SERVER_ENV`], for the end-to-end tests: a
-//! loopback server in place of the real one, or no wake at all.
+//! A debug build reads [`super::TEST_SERVER_ENV`], for the end-to-end tests:
+//! a loopback server in place of the real one, or no wake at all.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use nostr_sdk::prelude::PublicKey;
 
+use super::{http_client, test_server, SERVER_URL};
 use crate::rt::time::Duration;
-
-/// The instance MostroP2P/app registers its devices with.
-const SERVER_URL: &str = "https://mostro-push-server.fly.dev";
-
-/// **Debug builds only:** where the wakes of the end-to-end tests
-/// (`integration_test/`) go, in place of [`SERVER_URL`]: a loopback server
-/// (`http://127.0.0.1:<port>` or `http://localhost:<port>`), or, with any
-/// other value (`off`), nowhere. Release builds never read it.
-#[cfg(debug_assertions)]
-pub const TEST_SERVER_ENV: &str = "BOSSTRO_TEST_PUSH_SERVER";
-
-/// The server a value of [`TEST_SERVER_ENV`] names: a loopback one, or none.
-/// A value that is not one turns the wake off rather than falling back to
-/// the real server, so a typo cannot send a test's keys there.
-#[cfg(debug_assertions)]
-fn test_server_of(value: &str) -> Option<String> {
-    let value = value.trim().trim_end_matches('/');
-    (value.starts_with("http://127.0.0.1:") || value.starts_with("http://localhost:"))
-        .then(|| value.to_string())
-}
-
-/// The override, when this is a debug build and it is set: `Some(None)` is
-/// "no wake".
-#[cfg(debug_assertions)]
-fn test_server() -> Option<Option<String>> {
-    std::env::var(TEST_SERVER_ENV)
-        .ok()
-        .map(|value| test_server_of(&value))
-}
-
-#[cfg(not(debug_assertions))]
-fn test_server() -> Option<Option<String>> {
-    None
-}
 
 /// At most one wake per party per this many seconds (MostroP2P/app's and
 /// Mostrix's value), far under the server's own limit per pubkey.
@@ -88,7 +55,7 @@ enum Wake {
     Debounced,
     /// The server refused it or could not be reached.
     NotDelivered,
-    /// This waker asks no server (a debug build's [`TEST_SERVER_ENV`]).
+    /// This waker asks no server (a debug build's [`super::TEST_SERVER_ENV`]).
     Off,
 }
 
@@ -109,7 +76,7 @@ pub(crate) struct Waker {
 
 impl Waker {
     /// The one the app uses: the real server, unless a debug build was
-    /// pointed elsewhere ([`TEST_SERVER_ENV`]).
+    /// pointed elsewhere ([`super::TEST_SERVER_ENV`]).
     pub(crate) fn production() -> Arc<Self> {
         match test_server() {
             Some(server) => Self::new(server),
@@ -182,17 +149,6 @@ async fn post(server: &str, trade_pubkey: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Natively no redirect is followed: the body goes to the server named here
-/// and nowhere it points to. The browser follows redirects itself.
-fn http_client() -> anyhow::Result<reqwest::Client> {
-    let builder = reqwest::Client::builder();
-    #[cfg(not(target_arch = "wasm32"))]
-    let builder = builder.redirect(reqwest::redirect::Policy::none());
-    builder
-        .build()
-        .map_err(|e| anyhow::anyhow!("HTTP client build failed: {e}"))
-}
-
 #[cfg(all(test, not(target_arch = "wasm32")))]
 pub(crate) mod tests {
     use super::*;
@@ -225,6 +181,15 @@ pub(crate) mod tests {
     /// A push server answering every request with `status`, recording what
     /// it received. Returns its base URL.
     pub(crate) async fn serve(status: u16) -> (String, Seen) {
+        serve_with(move |_| (status, Vec::new())).await
+    }
+
+    /// A push server whose answer to each request (a status and extra
+    /// headers) is `answer`'s, recording what it received. Returns its base
+    /// URL.
+    pub(crate) async fn serve_with(
+        answer: impl Fn(&Request) -> (u16, Vec<(&'static str, String)>) + Send + 'static,
+    ) -> (String, Seen) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base = format!("http://{}", listener.local_addr().unwrap());
@@ -257,15 +222,22 @@ pub(crate) mod tests {
                         _ => break None,
                     }
                 };
-                if let Some((head, body)) = request {
-                    log.lock().unwrap().push(Request {
-                        line: head.lines().next().unwrap_or_default().to_string(),
-                        head,
-                        body,
-                    });
-                }
+                let Some((head, body)) = request else {
+                    continue;
+                };
+                let request = Request {
+                    line: head.lines().next().unwrap_or_default().to_string(),
+                    head,
+                    body,
+                };
+                let (status, headers) = answer(&request);
+                log.lock().unwrap().push(request);
+                let headers: String = headers
+                    .iter()
+                    .map(|(name, value)| format!("{name}: {value}\r\n"))
+                    .collect();
                 let reply = format!(
-                    "HTTP/1.1 {status} X\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                    "HTTP/1.1 {status} X\r\n{headers}Content-Length: 0\r\nConnection: close\r\n\r\n"
                 );
                 let _ = socket.write_all(reply.as_bytes()).await;
                 let _ = socket.shutdown().await;
@@ -374,22 +346,6 @@ pub(crate) mod tests {
         let wake = Waker::to(&base).notify(&party(), NOW).await;
 
         assert_eq!(wake, Wake::NotDelivered);
-    }
-
-    #[cfg(debug_assertions)]
-    #[test]
-    fn the_test_override_names_a_loopback_server_or_none() {
-        for (value, server) in [
-            ("http://127.0.0.1:7002", Some("http://127.0.0.1:7002")),
-            ("http://localhost:7002/", Some("http://localhost:7002")),
-            ("off", None),
-            ("", None),
-            ("https://mostro-push-server.fly.dev", None),
-            ("http://127.0.0.1.example.com:80", None),
-            ("http://localhost.example.com", None),
-        ] {
-            assert_eq!(test_server_of(value).as_deref(), server, "{value:?}");
-        }
     }
 
     #[tokio::test]

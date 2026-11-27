@@ -288,7 +288,7 @@ python3 tool/launcher_icon/build_sources.py && dart run flutter_launcher_icons  
   debug build may name one local test server (`BOSSTRO_TEST_BLOSSOM_SERVER`), the only `http://`
   origin it fetches from; a release build never reads it. Nothing logs a file key, a blob URL or
   a file's content.
-- **Waking the party** (`rust/src/push.rs`): a chat envelope is `p`-tagged to `pub(K_conv)`, which
+- **Waking the party** (`rust/src/push/wake.rs`): a chat envelope is `p`-tagged to `pub(K_conv)`, which
   [mostro-push-server](https://github.com/MostroP2P/mostro-push-server) cannot match to a
   registration, so after a message of this key was taken by a relay Bosstro asks the server to
   ring the party: `POST /api/notify` with the party's **trade pubkey** and nothing else, as

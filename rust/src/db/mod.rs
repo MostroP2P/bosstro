@@ -75,6 +75,12 @@ pub mod settings_keys {
     /// The language the solver chose for the app (a code such as `es`).
     /// Absent while the app follows the system's language.
     pub const LANGUAGE: &str = "language";
+
+    /// The watch of the active node's new disputes on the push server, as
+    /// JSON (`crate::push::watch`): whether the solver turned notifications
+    /// on, the device's FCM token, the watch the server holds and the
+    /// unwatches still to do. Absent until notifications are turned on.
+    pub const PUSH_WATCH: &str = "push_watch";
 }
 
 /// Storage trait — implemented by SQLite (native) and IndexedDB (wasm).
