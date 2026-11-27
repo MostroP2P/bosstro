@@ -551,5 +551,22 @@
   "orderAskedAt": "Consultato alle {time}",
   "pushDisputeNewTitle": "Nuova disputa",
   "pushDisputeNewBody": "Una disputa è in attesa di un solver sul tuo nodo.",
-  "pushDisputesChannelName": "Nuove dispute"
+  "pushDisputesChannelName": "Nuove dispute",
+  "settingsNotifications": "Notifiche",
+  "notificationsOn": "Attive",
+  "notificationsOff": "Disattivate",
+  "notificationsNewDisputes": "Nuove dispute su questo nodo",
+  "notificationsStatusRegistered": "Attive per questo nodo.",
+  "notificationsStatusWaiting": "Non ancora attive. Scegli prima un nodo.",
+  "notificationsStatusTokenRefused": "Il server delle notifiche ha rifiutato questo telefono. Disattiva le notifiche e riattivale.",
+  "notificationsStatusNodeNotTrusted": "Il server delle notifiche non copre questo nodo, quindi non suonerà.",
+  "notificationsStatusRateLimited": "Il server delle notifiche ha chiesto di attendere. Bosstro riproverà da solo.",
+  "notificationsStatusServerUnavailable": "Impossibile raggiungere il server delle notifiche. Bosstro riproverà da solo.",
+  "notificationsAbout": "Il telefono suona quando viene aperta una disputa sul tuo nodo, anche con Bosstro chiuso. La notifica non dice quale disputa: apri Bosstro per vederla.",
+  "notificationsPrivacy": "Google consegna la notifica. Il server delle notifiche vede il tuo indirizzo IP e quale nodo segui, mai la tua chiave.",
+  "notificationsLanguageNote": "La notifica è mostrata nella lingua del telefono.",
+  "notificationsBlockedTitle": "Le notifiche sono bloccate",
+  "notificationsBlockedBody": "Consenti le notifiche di Bosstro nelle impostazioni del telefono, poi riattivale qui.",
+  "notificationsUnavailableTitle": "Le notifiche non sono disponibili",
+  "notificationsUnavailableBody": "Servono Google Play Services e una connessione a internet. Controlla entrambi e riprova."
 }

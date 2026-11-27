@@ -11,6 +11,7 @@ import 'package:bosstro/features/disputes/providers/pending_providers.dart';
 import 'package:bosstro/features/nodes/models/node_display.dart';
 import 'package:bosstro/features/nodes/providers/node_providers.dart';
 import 'package:bosstro/features/nodes/providers/relay_providers.dart';
+import 'package:bosstro/features/notifications/providers/push_providers.dart';
 import 'package:bosstro/features/observer/providers/observer_providers.dart';
 import 'package:bosstro/features/orders/providers/orders_providers.dart';
 import 'package:bosstro/features/settings/providers/language_provider.dart';
@@ -26,6 +27,7 @@ import 'fake_disputes.dart';
 import 'fake_nodes.dart';
 import 'fake_observer.dart';
 import 'fake_orders.dart';
+import 'fake_push.dart';
 import 'fake_settings.dart';
 import 'fake_solver_key.dart';
 
@@ -35,6 +37,7 @@ export 'fake_disputes.dart';
 export 'fake_nodes.dart';
 export 'fake_observer.dart';
 export 'fake_orders.dart';
+export 'fake_push.dart';
 export 'fake_settings.dart';
 export 'fake_solver_key.dart';
 
@@ -69,6 +72,8 @@ class FakeKeyBackend {
 /// is false; on the Mostro node unless [nodes] says otherwise (pass a
 /// `FakeNodesCore()` for a solver who has not chosen one). The dispute feed
 /// has answered with no pending dispute unless [disputes] says otherwise.
+/// Pushes can be received, as on Android, unless [canPush] is false; they are
+/// off unless [push] says otherwise.
 List<Override> fakeCoreOverrides({
   bool signedIn = true,
   FakeKeyBackend? backend,
@@ -81,8 +86,12 @@ List<Override> fakeCoreOverrides({
   FakeObserverCore? observer,
   FakeOrdersCore? orders,
   FakeSettingsCore? settings,
+  bool canPush = true,
+  FakePushCore? push,
+  FakePushMessaging? messaging,
 }) {
   final nodeCore = nodes ?? FakeNodesCore(active: mostroNodePubkey);
+  final calls = push?.calls ?? messaging?.calls ?? PushCalls();
   final keys =
       backend ??
       FakeKeyBackend(
@@ -109,6 +118,11 @@ List<Override> fakeCoreOverrides({
     ordersCoreProvider.overrideWithValue(orders ?? FakeOrdersCore()),
     settingsCoreProvider.overrideWithValue(settings ?? FakeSettingsCore()),
     languageProvider.overrideWith(() => LanguageNotifier(settings?.saved)),
+    canPushProvider.overrideWithValue(canPush),
+    pushCoreProvider.overrideWithValue(push ?? FakePushCore(calls)),
+    pushMessagingProvider.overrideWithValue(
+      messaging ?? FakePushMessaging(calls),
+    ),
   ];
 }
 

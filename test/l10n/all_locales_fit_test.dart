@@ -2,8 +2,10 @@ import 'dart:math' as math;
 
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:bosstro/core/app.dart';
 import 'package:bosstro/core/app_routes.dart';
 import 'package:bosstro/features/chat/services/chat_core.dart';
 import 'package:bosstro/features/chat/widgets/chat_composer.dart';
@@ -12,6 +14,8 @@ import 'package:bosstro/features/disputes/services/disputes_core.dart';
 import 'package:bosstro/features/disputes/widgets/in_progress_dispute_row.dart';
 import 'package:bosstro/features/disputes/widgets/detail_segments.dart';
 import 'package:bosstro/features/nodes/models/node_display.dart';
+import 'package:bosstro/features/notifications/providers/push_providers.dart';
+import 'package:bosstro/features/notifications/services/push_core.dart';
 import 'package:bosstro/features/disputes/widgets/pending_dispute_row.dart';
 import 'package:bosstro/features/observer/screens/observer_screen.dart';
 import 'package:bosstro/features/observer/services/observer_core.dart';
@@ -107,6 +111,8 @@ Future<void> _pump(
   bool signedIn = true,
   bool? bonds = true,
   FakeOrdersCore? orders,
+  FakePushCore? push,
+  FakePushMessaging? messaging,
 }) async {
   // A fresh app each time: pumping a new one in its place would keep the
   // previous router and providers.
@@ -124,6 +130,8 @@ Future<void> _pump(
         chat: _chat(),
         observer: _observer(),
         orders: orders,
+        push: push,
+        messaging: messaging,
         nodes: FakeNodesCore(active: mostroNodePubkey, info: sampleInfo()),
       ),
     ),
@@ -437,6 +445,53 @@ void main() {
         await _fitsToTheEnd(tester, 'Relays');
         await _pump(tester, locale, AppRoute.nodeInfo(cubaPubkey));
         await _fitsToTheEnd(tester, 'Node info');
+      });
+
+      testWidgets('Notifications, its states and its dialogs', (tester) async {
+        // Off, then on in every state the push server can leave it in.
+        for (final status in [null, ...PushWatchStatus.values]) {
+          final calls = PushCalls();
+          final core = FakePushCore(calls, isEnabled: status != null);
+          if (status != null) core.registered = status;
+          await _pump(tester, locale, AppRoute.settings, push: core);
+          await ProviderScope.containerOf(
+            tester.element(find.byType(BosstroApp)),
+          ).read(pushControllerProvider.notifier).start();
+          await tester.pumpAndSettle();
+          await _fitsToTheEnd(tester, 'Settings, ${status?.name ?? 'off'}');
+          await _pump(tester, locale, AppRoute.notifications, push: core);
+          await ProviderScope.containerOf(
+            tester.element(find.byType(BosstroApp)),
+          ).read(pushControllerProvider.notifier).start();
+          await tester.pumpAndSettle();
+          await _fitsToTheEnd(
+            tester,
+            'Notifications, ${status?.name ?? 'off'}',
+          );
+        }
+        // The two refusals of turning it on.
+        for (final arrange in <void Function(FakePushMessaging)>[
+          (messaging) => messaging.permission = false,
+          (messaging) => messaging.token = null,
+        ]) {
+          final calls = PushCalls();
+          final messaging = FakePushMessaging(calls);
+          arrange(messaging);
+          await _pump(
+            tester,
+            locale,
+            AppRoute.notifications,
+            push: FakePushCore(calls),
+            messaging: messaging,
+          );
+          await _tap(tester, find.byType(Switch));
+          expect(find.byType(MostroDialog), findsOneWidget);
+          await _fitsToTheEnd(
+            tester,
+            'Notifications dialog',
+            within: find.byType(MostroDialog),
+          );
+        }
       });
 
       testWidgets('About and the licence dialog', (tester) async {

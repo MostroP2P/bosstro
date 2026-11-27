@@ -551,5 +551,22 @@
   "orderAskedAt": "Abgefragt um {time}",
   "pushDisputeNewTitle": "Neuer Streitfall",
   "pushDisputeNewBody": "Ein Streitfall wartet auf deinem Node auf einen Solver.",
-  "pushDisputesChannelName": "Neue Streitfälle"
+  "pushDisputesChannelName": "Neue Streitfälle",
+  "settingsNotifications": "Benachrichtigungen",
+  "notificationsOn": "An",
+  "notificationsOff": "Aus",
+  "notificationsNewDisputes": "Neue Streitfälle auf diesem Node",
+  "notificationsStatusRegistered": "Aktiv für diesen Node.",
+  "notificationsStatusWaiting": "Noch nicht aktiv. Wähle zuerst einen Node.",
+  "notificationsStatusTokenRefused": "Der Benachrichtigungsserver hat dieses Telefon abgelehnt. Schalte die Benachrichtigungen aus und wieder ein.",
+  "notificationsStatusNodeNotTrusted": "Der Benachrichtigungsserver deckt diesen Node nicht ab, daher klingelt es nicht.",
+  "notificationsStatusRateLimited": "Der Benachrichtigungsserver bittet um Geduld. Bosstro versucht es von selbst erneut.",
+  "notificationsStatusServerUnavailable": "Der Benachrichtigungsserver ist nicht erreichbar. Bosstro versucht es von selbst erneut.",
+  "notificationsAbout": "Dein Telefon klingelt, wenn auf deinem Node ein Streitfall eröffnet wird, auch wenn Bosstro geschlossen ist. Die Benachrichtigung nennt den Streitfall nicht: Öffne Bosstro, um ihn zu sehen.",
+  "notificationsPrivacy": "Google stellt die Benachrichtigung zu. Der Benachrichtigungsserver sieht deine IP-Adresse und welchem Node du folgst, nie deinen Schlüssel.",
+  "notificationsLanguageNote": "Die Benachrichtigung erscheint in der Sprache deines Telefons.",
+  "notificationsBlockedTitle": "Benachrichtigungen sind blockiert",
+  "notificationsBlockedBody": "Erlaube Benachrichtigungen für Bosstro in den Einstellungen deines Telefons und schalte sie hier wieder ein.",
+  "notificationsUnavailableTitle": "Benachrichtigungen sind nicht verfügbar",
+  "notificationsUnavailableBody": "Sie brauchen die Google Play-Dienste und eine Internetverbindung. Prüfe beides und versuche es erneut."
 }

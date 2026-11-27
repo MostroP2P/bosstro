@@ -5,91 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:bosstro/features/notifications/providers/push_providers.dart';
 import 'package:bosstro/features/notifications/services/push_core.dart';
-import 'package:bosstro/features/notifications/services/push_messaging.dart';
-
-/// Everything asked of the device and of the core, in order, in one list:
-/// the order between the two is what the tests check.
-class Calls {
-  final log = <String>[];
-}
-
-class FakeMessaging implements PushMessaging {
-  FakeMessaging(this.calls);
-
-  final Calls calls;
-  bool permission = true;
-  String? token = 'token-1';
-  Object? tokenError;
-  bool tokenNeverAnswers = false;
-  final refreshes = StreamController<String>.broadcast();
-
-  @override
-  Future<bool> requestPermission() async {
-    calls.log.add('requestPermission');
-    return permission;
-  }
-
-  @override
-  Future<String?> getToken() {
-    calls.log.add('getToken');
-    if (tokenNeverAnswers) return Completer<String?>().future;
-    if (tokenError != null) return Future.error(tokenError!);
-    return Future.value(token);
-  }
-
-  @override
-  Future<void> deleteToken() async => calls.log.add('deleteToken');
-
-  @override
-  Future<void> setAutoInit(bool enabled) async =>
-      calls.log.add('setAutoInit($enabled)');
-
-  @override
-  Stream<String> tokenRefreshes() {
-    calls.log.add('tokenRefreshes');
-    return refreshes.stream;
-  }
-}
-
-class FakeCore implements PushCore {
-  FakeCore(this.calls, {this.isEnabled = false});
-
-  final Calls calls;
-  bool isEnabled;
-  PushWatchStatus registered = PushWatchStatus.registered;
-
-  PushWatchStatus get _status => isEnabled ? registered : PushWatchStatus.off;
-
-  @override
-  Future<bool> enabled() async {
-    calls.log.add('core.enabled');
-    return isEnabled;
-  }
-
-  @override
-  Future<PushWatchStatus> setEnabled(bool enabled) async {
-    calls.log.add('core.setEnabled($enabled)');
-    isEnabled = enabled;
-    return _status;
-  }
-
-  @override
-  Future<PushWatchStatus> setToken(String? token) async {
-    calls.log.add('core.setToken($token)');
-    return _status;
-  }
-
-  @override
-  Future<PushWatchStatus> reconcile() async {
-    calls.log.add('core.reconcile');
-    return _status;
-  }
-}
+import '../../support/fake_push.dart';
 
 void main() {
-  late Calls calls;
-  late FakeMessaging messaging;
-  late FakeCore core;
+  late PushCalls calls;
+  late FakePushMessaging messaging;
+  late FakePushCore core;
 
   ProviderContainer container({bool canPush = true}) {
     final container = ProviderContainer(
@@ -104,9 +25,9 @@ void main() {
   }
 
   setUp(() {
-    calls = Calls();
-    messaging = FakeMessaging(calls);
-    core = FakeCore(calls);
+    calls = PushCalls();
+    messaging = FakePushMessaging(calls);
+    core = FakePushCore(calls);
   });
 
   test('with notifications off, startup asks nothing of the device', () async {
@@ -158,9 +79,12 @@ void main() {
   });
 
   for (final (name, arrange) in [
-    ('gives none', (FakeMessaging m) => m.token = null),
-    ('gives an empty one', (FakeMessaging m) => m.token = ''),
-    ('fails', (FakeMessaging m) => m.tokenError = StateError('no services')),
+    ('gives none', (FakePushMessaging m) => m.token = null),
+    ('gives an empty one', (FakePushMessaging m) => m.token = ''),
+    (
+      'fails',
+      (FakePushMessaging m) => m.tokenError = StateError('no services'),
+    ),
   ]) {
     test('a device whose token request $name stays off, as it was', () async {
       arrange(messaging);

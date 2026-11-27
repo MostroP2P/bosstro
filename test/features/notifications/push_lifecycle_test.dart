@@ -8,7 +8,7 @@ import 'package:bosstro/features/notifications/widgets/push_lifecycle.dart';
 import 'package:bosstro/features/solver_key/providers/solver_key_providers.dart';
 import 'package:bosstro/src/rust/api/solver.dart';
 
-import 'push_controller_test.dart';
+import '../../support/fake_push.dart';
 
 const _key = SolverKeyInfo(npub: 'npub1one', publicKeyHex: 'aa');
 const _otherKey = SolverKeyInfo(npub: 'npub1two', publicKeyHex: 'bb');
@@ -26,20 +26,20 @@ class _Key extends SolverKeyNotifier {
 }
 
 void main() {
-  late Calls calls;
+  late PushCalls calls;
   late _Node node;
   late _Key key;
 
   Future<void> pump(WidgetTester tester) async {
-    calls = Calls();
+    calls = PushCalls();
     node = _Node('node-a');
     key = _Key(_key);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           canPushProvider.overrideWithValue(true),
-          pushCoreProvider.overrideWithValue(FakeCore(calls)),
-          pushMessagingProvider.overrideWithValue(FakeMessaging(calls)),
+          pushCoreProvider.overrideWithValue(FakePushCore(calls)),
+          pushMessagingProvider.overrideWithValue(FakePushMessaging(calls)),
           activeNodeProvider.overrideWith(() => node),
           solverKeyProvider.overrideWith(() => key),
         ],

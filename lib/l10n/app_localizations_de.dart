@@ -1976,4 +1976,66 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get pushDisputesChannelName => 'Neue Streitfälle';
+
+  @override
+  String get settingsNotifications => 'Benachrichtigungen';
+
+  @override
+  String get notificationsOn => 'An';
+
+  @override
+  String get notificationsOff => 'Aus';
+
+  @override
+  String get notificationsNewDisputes => 'Neue Streitfälle auf diesem Node';
+
+  @override
+  String get notificationsStatusRegistered => 'Aktiv für diesen Node.';
+
+  @override
+  String get notificationsStatusWaiting =>
+      'Noch nicht aktiv. Wähle zuerst einen Node.';
+
+  @override
+  String get notificationsStatusTokenRefused =>
+      'Der Benachrichtigungsserver hat dieses Telefon abgelehnt. Schalte die Benachrichtigungen aus und wieder ein.';
+
+  @override
+  String get notificationsStatusNodeNotTrusted =>
+      'Der Benachrichtigungsserver deckt diesen Node nicht ab, daher klingelt es nicht.';
+
+  @override
+  String get notificationsStatusRateLimited =>
+      'Der Benachrichtigungsserver bittet um Geduld. Bosstro versucht es von selbst erneut.';
+
+  @override
+  String get notificationsStatusServerUnavailable =>
+      'Der Benachrichtigungsserver ist nicht erreichbar. Bosstro versucht es von selbst erneut.';
+
+  @override
+  String get notificationsAbout =>
+      'Dein Telefon klingelt, wenn auf deinem Node ein Streitfall eröffnet wird, auch wenn Bosstro geschlossen ist. Die Benachrichtigung nennt den Streitfall nicht: Öffne Bosstro, um ihn zu sehen.';
+
+  @override
+  String get notificationsPrivacy =>
+      'Google stellt die Benachrichtigung zu. Der Benachrichtigungsserver sieht deine IP-Adresse und welchem Node du folgst, nie deinen Schlüssel.';
+
+  @override
+  String get notificationsLanguageNote =>
+      'Die Benachrichtigung erscheint in der Sprache deines Telefons.';
+
+  @override
+  String get notificationsBlockedTitle => 'Benachrichtigungen sind blockiert';
+
+  @override
+  String get notificationsBlockedBody =>
+      'Erlaube Benachrichtigungen für Bosstro in den Einstellungen deines Telefons und schalte sie hier wieder ein.';
+
+  @override
+  String get notificationsUnavailableTitle =>
+      'Benachrichtigungen sind nicht verfügbar';
+
+  @override
+  String get notificationsUnavailableBody =>
+      'Sie brauchen die Google Play-Dienste und eine Internetverbindung. Prüfe beides und versuche es erneut.';
 }

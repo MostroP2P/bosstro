@@ -1964,4 +1964,65 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get pushDisputesChannelName => 'Nieuwe disputen';
+
+  @override
+  String get settingsNotifications => 'Meldingen';
+
+  @override
+  String get notificationsOn => 'Aan';
+
+  @override
+  String get notificationsOff => 'Uit';
+
+  @override
+  String get notificationsNewDisputes => 'Nieuwe disputen op deze node';
+
+  @override
+  String get notificationsStatusRegistered => 'Actief voor deze node.';
+
+  @override
+  String get notificationsStatusWaiting =>
+      'Nog niet actief. Kies eerst een node.';
+
+  @override
+  String get notificationsStatusTokenRefused =>
+      'De meldingsserver heeft deze telefoon geweigerd. Zet meldingen uit en weer aan.';
+
+  @override
+  String get notificationsStatusNodeNotTrusted =>
+      'De meldingsserver dekt deze node niet, dus er komt geen melding.';
+
+  @override
+  String get notificationsStatusRateLimited =>
+      'De meldingsserver vraagt om te wachten. Bosstro probeert het vanzelf opnieuw.';
+
+  @override
+  String get notificationsStatusServerUnavailable =>
+      'De meldingsserver is niet bereikbaar. Bosstro probeert het vanzelf opnieuw.';
+
+  @override
+  String get notificationsAbout =>
+      'Je telefoon gaat af wanneer er een dispuut wordt geopend op je node, ook als Bosstro gesloten is. De melding zegt niet welk dispuut: open Bosstro om het te zien.';
+
+  @override
+  String get notificationsPrivacy =>
+      'Google bezorgt de melding. De meldingsserver ziet je IP-adres en welke node je volgt, nooit je sleutel.';
+
+  @override
+  String get notificationsLanguageNote =>
+      'De melding verschijnt in de taal van je telefoon.';
+
+  @override
+  String get notificationsBlockedTitle => 'Meldingen zijn geblokkeerd';
+
+  @override
+  String get notificationsBlockedBody =>
+      'Sta meldingen van Bosstro toe in de instellingen van je telefoon en zet ze hier weer aan.';
+
+  @override
+  String get notificationsUnavailableTitle => 'Meldingen zijn niet beschikbaar';
+
+  @override
+  String get notificationsUnavailableBody =>
+      'Ze hebben Google Play-services en een internetverbinding nodig. Controleer beide en probeer het opnieuw.';
 }

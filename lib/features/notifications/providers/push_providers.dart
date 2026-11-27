@@ -164,7 +164,8 @@ class PushController extends Notifier<PushState> {
       debugPrint('[push] not disabled in the core: ${e.runtimeType}');
       return;
     }
-    await _refreshes?.cancel();
+    // Not awaited: nothing here depends on the cancellation having ended.
+    unawaited(_refreshes?.cancel());
     _refreshes = null;
     await _quietly(_messaging.deleteToken);
     await _quietly(() => _messaging.setAutoInit(false));

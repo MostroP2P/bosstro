@@ -1958,4 +1958,66 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get pushDisputesChannelName => 'Novas disputas';
+
+  @override
+  String get settingsNotifications => 'Notificações';
+
+  @override
+  String get notificationsOn => 'Ativadas';
+
+  @override
+  String get notificationsOff => 'Desativadas';
+
+  @override
+  String get notificationsNewDisputes => 'Novas disputas neste nó';
+
+  @override
+  String get notificationsStatusRegistered => 'Ativas para este nó.';
+
+  @override
+  String get notificationsStatusWaiting =>
+      'Ainda não estão ativas. Escolha um nó primeiro.';
+
+  @override
+  String get notificationsStatusTokenRefused =>
+      'O servidor de notificações recusou este telefone. Desative as notificações e ative-as de novo.';
+
+  @override
+  String get notificationsStatusNodeNotTrusted =>
+      'O servidor de notificações não cobre este nó, então ele não vai tocar.';
+
+  @override
+  String get notificationsStatusRateLimited =>
+      'O servidor de notificações pediu para aguardar. O Bosstro tentará de novo sozinho.';
+
+  @override
+  String get notificationsStatusServerUnavailable =>
+      'Não foi possível contatar o servidor de notificações. O Bosstro tentará de novo sozinho.';
+
+  @override
+  String get notificationsAbout =>
+      'Seu telefone toca quando uma disputa é aberta no seu nó, mesmo com o Bosstro fechado. A notificação não diz qual disputa: abra o Bosstro para vê-la.';
+
+  @override
+  String get notificationsPrivacy =>
+      'O Google entrega a notificação. O servidor de notificações vê seu endereço IP e qual nó você segue, nunca sua chave.';
+
+  @override
+  String get notificationsLanguageNote =>
+      'A notificação aparece no idioma do seu telefone.';
+
+  @override
+  String get notificationsBlockedTitle => 'As notificações estão bloqueadas';
+
+  @override
+  String get notificationsBlockedBody =>
+      'Permita as notificações do Bosstro nas configurações do telefone e ative-as aqui de novo.';
+
+  @override
+  String get notificationsUnavailableTitle =>
+      'As notificações não estão disponíveis';
+
+  @override
+  String get notificationsUnavailableBody =>
+      'Elas precisam do Google Play Services e de conexão com a internet. Verifique os dois e tente de novo.';
 }

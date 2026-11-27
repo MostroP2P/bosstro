@@ -1958,4 +1958,66 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get pushDisputesChannelName => 'Nouveaux litiges';
+
+  @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get notificationsOn => 'Activées';
+
+  @override
+  String get notificationsOff => 'Désactivées';
+
+  @override
+  String get notificationsNewDisputes => 'Nouveaux litiges sur ce nœud';
+
+  @override
+  String get notificationsStatusRegistered => 'Actives pour ce nœud.';
+
+  @override
+  String get notificationsStatusWaiting =>
+      'Pas encore actives. Choisissez d\'abord un nœud.';
+
+  @override
+  String get notificationsStatusTokenRefused =>
+      'Le serveur de notifications a refusé ce téléphone. Désactivez les notifications puis réactivez-les.';
+
+  @override
+  String get notificationsStatusNodeNotTrusted =>
+      'Le serveur de notifications ne couvre pas ce nœud : il ne sonnera pas.';
+
+  @override
+  String get notificationsStatusRateLimited =>
+      'Le serveur de notifications a demandé d\'attendre. Bosstro réessaiera de lui-même.';
+
+  @override
+  String get notificationsStatusServerUnavailable =>
+      'Le serveur de notifications est injoignable. Bosstro réessaiera de lui-même.';
+
+  @override
+  String get notificationsAbout =>
+      'Votre téléphone sonne quand un litige est ouvert sur votre nœud, même si Bosstro est fermé. La notification ne dit pas quel litige : ouvrez Bosstro pour le voir.';
+
+  @override
+  String get notificationsPrivacy =>
+      'Google achemine la notification. Le serveur de notifications voit votre adresse IP et le nœud que vous suivez, jamais votre clé.';
+
+  @override
+  String get notificationsLanguageNote =>
+      'La notification s\'affiche dans la langue de votre téléphone.';
+
+  @override
+  String get notificationsBlockedTitle => 'Les notifications sont bloquées';
+
+  @override
+  String get notificationsBlockedBody =>
+      'Autorisez les notifications de Bosstro dans les réglages de votre téléphone, puis réactivez-les ici.';
+
+  @override
+  String get notificationsUnavailableTitle =>
+      'Les notifications ne sont pas disponibles';
+
+  @override
+  String get notificationsUnavailableBody =>
+      'Elles nécessitent les services Google Play et une connexion à internet. Vérifiez les deux et réessayez.';
 }

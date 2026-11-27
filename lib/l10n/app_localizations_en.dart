@@ -1947,4 +1947,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pushDisputesChannelName => 'New disputes';
+
+  @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get notificationsOn => 'On';
+
+  @override
+  String get notificationsOff => 'Off';
+
+  @override
+  String get notificationsNewDisputes => 'New disputes on this node';
+
+  @override
+  String get notificationsStatusRegistered => 'Active for this node.';
+
+  @override
+  String get notificationsStatusWaiting =>
+      'Not active yet. Choose a node first.';
+
+  @override
+  String get notificationsStatusTokenRefused =>
+      'The notification server refused this phone. Turn notifications off and on again.';
+
+  @override
+  String get notificationsStatusNodeNotTrusted =>
+      'The notification server does not cover this node, so it will not ring.';
+
+  @override
+  String get notificationsStatusRateLimited =>
+      'The notification server asked to wait. Bosstro will try again by itself.';
+
+  @override
+  String get notificationsStatusServerUnavailable =>
+      'The notification server could not be reached. Bosstro will try again by itself.';
+
+  @override
+  String get notificationsAbout =>
+      'Your phone rings when a dispute is opened on your node, even with Bosstro closed. The notification does not say which dispute: open Bosstro to see it.';
+
+  @override
+  String get notificationsPrivacy =>
+      'Google delivers the notification. The notification server sees your IP address and which node you follow, never your key.';
+
+  @override
+  String get notificationsLanguageNote =>
+      'The notification is shown in your phone\'s language.';
+
+  @override
+  String get notificationsBlockedTitle => 'Notifications are blocked';
+
+  @override
+  String get notificationsBlockedBody =>
+      'Allow notifications for Bosstro in your phone\'s settings, then turn them on here again.';
+
+  @override
+  String get notificationsUnavailableTitle => 'Notifications are not available';
+
+  @override
+  String get notificationsUnavailableBody =>
+      'They need Google Play Services and an internet connection. Check both and try again.';
 }
