@@ -88,7 +88,12 @@ pub(crate) fn pool() -> Result<&'static Arc<RelayPool>> {
 /// (MostroP2P/app).
 pub async fn initialize_relays() -> Result<()> {
     if POOL.get().is_some() {
-        log::info!("[relay] pool already running — re-attaching");
+        // The process may have been frozen in between, with no Dart alive to
+        // see the app come back: this start is that resume.
+        log::info!("[relay] pool already running — re-attaching and resyncing");
+        crate::rt::spawn(async {
+            resync().await;
+        });
         return Ok(());
     }
 
@@ -237,6 +242,54 @@ pub async fn on_relay_status_changed() -> Result<RelayStatusStream> {
     Ok(RelayStatusStream {
         rx: pool()?.subscribe_relay_status(),
     })
+}
+
+/// What one [`resync`] found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResyncOutcome {
+    /// A relay was connected when the pass ended.
+    pub online: bool,
+    /// This call ran no pass of its own: another call's pass started after
+    /// this one was made, and this is its result.
+    pub coalesced: bool,
+}
+
+/// Bring the core back in step with the relays after the app was in the
+/// background, where Android freezes the process and its sockets die: the
+/// relays found disconnected are reconnected now rather than at their next
+/// retry, so are those still marked connected that no longer answer, and
+/// every live subscription a relay lacks is issued again
+/// ([`crate::nostr::resync`]). The relays then send what they hold, so the
+/// streams of disputes, answers and chats deliver what was missed. The pass
+/// starts by telling the dispute lists to read again, for what changed with
+/// time alone.
+///
+/// Safe to call at any time and more than once. One pass runs at a time; a
+/// call made while one runs waits for it to end and then gets a pass that
+/// started after the call, its own or one shared with the calls that waited
+/// with it. A pass over a healthy pool changes nothing. Before the pool
+/// exists it does nothing and reports offline.
+///
+/// A pass over healthy relays takes well under a second. Each of its waits
+/// is bounded (a relay that does not answer, no relay connecting, a
+/// subscription a relay does not take), about twenty seconds in all at
+/// worst. Nothing has to wait for it.
+pub async fn resync() -> ResyncOutcome {
+    static FLIGHT: crate::nostr::resync::SingleFlight<bool> =
+        crate::nostr::resync::SingleFlight::new();
+    let (online, coalesced) = FLIGHT
+        .run(|| async {
+            let Ok(pool) = pool() else {
+                log::info!("[relay] resync: no relay pool yet, nothing to do");
+                return false;
+            };
+            // First, so what changed with time alone shows without waiting
+            // for the relays; what they send announces itself.
+            crate::disputes::feed::announce_reread();
+            crate::nostr::resync::pass(&pool.client(), crate::nostr::live_subs::live_subs()).await
+        })
+        .await;
+    ResyncOutcome { online, coalesced }
 }
 
 /// Wrapper so flutter_rust_bridge can hand Dart a pull-based stream.

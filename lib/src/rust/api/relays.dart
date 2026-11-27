@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `apply_relay_list`, `load_persisted_relays`, `persist_relay`, `pool`, `removal_effect`, `starting_defaults`, `watch_online`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// Start the relay pool with the persisted relay list — every active relay
 /// the solver or a node added, with the removed announced relays restored as
@@ -51,6 +51,28 @@ Future<ConnectionStateStream> onConnectionStateChanged() =>
 /// removed.
 Future<RelayStatusStream> onRelayStatusChanged() =>
     RustLib.instance.api.crateApiRelaysOnRelayStatusChanged();
+
+/// Bring the core back in step with the relays after the app was in the
+/// background, where Android freezes the process and its sockets die: the
+/// relays found disconnected are reconnected now rather than at their next
+/// retry, so are those still marked connected that no longer answer, and
+/// every live subscription a relay lacks is issued again
+/// ([`crate::nostr::resync`]). The relays then send what they hold, so the
+/// streams of disputes, answers and chats deliver what was missed. The pass
+/// starts by telling the dispute lists to read again, for what changed with
+/// time alone.
+///
+/// Safe to call at any time and more than once. One pass runs at a time; a
+/// call made while one runs waits for it to end and then gets a pass that
+/// started after the call, its own or one shared with the calls that waited
+/// with it. A pass over a healthy pool changes nothing. Before the pool
+/// exists it does nothing and reports offline.
+///
+/// A pass over healthy relays takes well under a second. Each of its waits
+/// is bounded (a relay that does not answer, no relay connecting, a
+/// subscription a relay does not take), about twenty seconds in all at
+/// worst. Nothing has to wait for it.
+Future<ResyncOutcome> resync() => RustLib.instance.api.crateApiRelaysResync();
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<ConnectionStateStream>>
 abstract class ConnectionStateStream implements RustOpaqueInterface {
@@ -141,3 +163,26 @@ enum RelaySource {
 
 /// One relay's connection, as the pool last saw it.
 enum RelayStatus { connected, disconnected, connecting, error }
+
+/// What one [`resync`] found.
+class ResyncOutcome {
+  /// A relay was connected when the pass ended.
+  final bool online;
+
+  /// This call ran no pass of its own: another call's pass started after
+  /// this one was made, and this is its result.
+  final bool coalesced;
+
+  const ResyncOutcome({required this.online, required this.coalesced});
+
+  @override
+  int get hashCode => online.hashCode ^ coalesced.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ResyncOutcome &&
+          runtimeType == other.runtimeType &&
+          online == other.online &&
+          coalesced == other.coalesced;
+}

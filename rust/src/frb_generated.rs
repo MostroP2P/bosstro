@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1110505310;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 134302533;
 
 // Section: executor
 
@@ -1797,6 +1797,41 @@ fn wire__crate__api__resolve__resolve_dispute_impl(
                             api_bond,
                         )
                         .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__relays__resync_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "resync",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, ()>(
+                    (move || async move {
+                        let output_ok = Result::<_, ()>::Ok(crate::api::relays::resync().await)?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3977,6 +4012,18 @@ impl SseDecode for crate::api::resolve::ResolvedAs {
     }
 }
 
+impl SseDecode for crate::api::relays::ResyncOutcome {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_online = <bool>::sse_decode(deserializer);
+        let mut var_coalesced = <bool>::sse_decode(deserializer);
+        return crate::api::relays::ResyncOutcome {
+            online: var_online,
+            coalesced: var_coalesced,
+        };
+    }
+}
+
 impl SseDecode for crate::api::solver::SolverKeyError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4264,28 +4311,29 @@ fn pde_ffi_dispatcher_primary_impl(
         ),
         46 => wire__crate__api__relays__remove_relay_impl(port, ptr, rust_vec_len, data_len),
         47 => wire__crate__api__resolve__resolve_dispute_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__chat__retry_chat_message_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__nodes__select_active_node_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__chat__send_chat_attachment_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__chat__send_chat_message_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__settings__set_language_impl(port, ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__take__solver_permission_default_impl(
+        48 => wire__crate__api__relays__resync_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__chat__retry_chat_message_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__nodes__select_active_node_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__chat__send_chat_attachment_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__chat__send_chat_message_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__settings__set_language_impl(port, ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__take__solver_permission_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        54 => wire__crate__api__solver__solver_pubkey_impl(port, ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__take__solver_standing_impl(port, ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__take__solver_status_default_impl(port, ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__nodes__sync_mostro_node_pictures_impl(
+        55 => wire__crate__api__solver__solver_pubkey_impl(port, ptr, rust_vec_len, data_len),
+        56 => wire__crate__api__take__solver_standing_impl(port, ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__take__solver_status_default_impl(port, ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__nodes__sync_mostro_node_pictures_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        58 => wire__crate__api__take__take_dispute_impl(port, ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__solver__unload_solver_key_impl(port, ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__take__take_dispute_impl(port, ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__solver__unload_solver_key_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5765,6 +5813,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::resolve::ResolvedAs>
     for crate::api::resolve::ResolvedAs
 {
     fn into_into_dart(self) -> crate::api::resolve::ResolvedAs {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::relays::ResyncOutcome {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.online.into_into_dart().into_dart(),
+            self.coalesced.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::relays::ResyncOutcome
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::relays::ResyncOutcome>
+    for crate::api::relays::ResyncOutcome
+{
+    fn into_into_dart(self) -> crate::api::relays::ResyncOutcome {
         self
     }
 }
@@ -7451,6 +7520,14 @@ impl SseEncode for crate::api::resolve::ResolvedAs {
             },
             serializer,
         );
+    }
+}
+
+impl SseEncode for crate::api::relays::ResyncOutcome {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.online, serializer);
+        <bool>::sse_encode(self.coalesced, serializer);
     }
 }
 

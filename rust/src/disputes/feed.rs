@@ -662,6 +662,25 @@ pub(crate) fn subscribe_updates() -> broadcast::Receiver<DisputeUpdate> {
     updates().subscribe()
 }
 
+/// Tell whoever shows the active node's disputes to read them again, with an
+/// update that names none (what a reader that fell behind gets too). For the
+/// app's resume: a list also changes with time alone (a dispute past its
+/// NIP-40 expiration leaves), which no relay event announces.
+pub(crate) fn announce_reread() {
+    if let Some(node) = crate::config::active_mostro_pubkey() {
+        announce_reread_of(node);
+    }
+}
+
+fn announce_reread_of(node: String) {
+    // No receiver (Dart not listening yet) is not an error.
+    let _ = updates().send(DisputeUpdate {
+        synced: is_synced(&node),
+        mostro_pubkey: node,
+        dispute: None,
+    });
+}
+
 /// Start the feed on the relay pool's client and point it at the active
 /// node. Called once the pool exists (`api::relays::initialize_relays`);
 /// later calls only re-point it.
@@ -717,12 +736,42 @@ pub(crate) async fn memory_rows(node: &str, status: DisputeStatus) -> Vec<Disput
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
+
     use crate::disputes::event::tests::{mostrod_event, DISPUTE_ID};
     use nostr_sdk::local_relay::{LocalRelayBuilder, MockRelay, RateLimit};
     use nostr_sdk::prelude::Keys;
     use std::time::Duration;
 
     const OTHER_ID: &str = "1f2e3d4c-5b6a-4978-8695-a4b3c2d1e0f9";
+
+    /// The update of a resume names no dispute, which every reader takes as
+    /// "read again".
+    #[tokio::test]
+    async fn a_reread_is_announced_as_an_update_that_names_no_dispute() {
+        // Arrange: the channel is the process's, shared with other tests.
+        let node = "reread-test-node".to_string();
+        let mut rx = subscribe_updates();
+
+        // Act
+        announce_reread_of(node.clone());
+
+        // Assert
+        let update = tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                match rx.recv().await {
+                    Ok(update) if update.mostro_pubkey == node => break update,
+                    // Another test's update, or so many of them that this
+                    // reader fell behind and may have missed its own: then
+                    // the timeout says so.
+                    Ok(_) | Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Closed) => panic!("the channel closed"),
+                }
+            }
+        })
+        .await
+        .expect("the update of the reread");
+        assert!(update.dispute.is_none());
+    }
 
     async fn connected_client(relay: &MockRelay) -> Arc<Client> {
         let url = relay.url().await;
