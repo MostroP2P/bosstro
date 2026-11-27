@@ -19,6 +19,17 @@ class FakePushMessaging implements PushMessaging {
   bool tokenNeverAnswers = false;
   final refreshes = StreamController<String>.broadcast();
 
+  /// A tap on a new-dispute notification. Following them is not in the
+  /// log: [tapsFollowed] says it.
+  final taps = StreamController<void>.broadcast();
+  bool tapsFollowed = false;
+
+  @override
+  Stream<void> newDisputeTaps() {
+    tapsFollowed = true;
+    return taps.stream;
+  }
+
   @override
   Future<bool> requestPermission() async {
     calls.log.add('requestPermission');

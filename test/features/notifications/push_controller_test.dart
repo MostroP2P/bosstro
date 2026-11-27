@@ -181,6 +181,31 @@ void main() {
     expect(calls.log, ['core.setToken(token-2)']);
   });
 
+  test('a tap on a notification is passed on while they are on', () async {
+    final c = container();
+    await c.read(pushControllerProvider.notifier).enable();
+
+    messaging.taps.add(null);
+    messaging.taps.add(null);
+    await pumpEventQueue();
+
+    expect(c.read(newDisputeTapsProvider), 2);
+  });
+
+  test('with notifications off, taps are not followed', () async {
+    final c = container();
+    final controller = c.read(pushControllerProvider.notifier);
+
+    await controller.start();
+    expect(messaging.tapsFollowed, isFalse, reason: 'it would start Firebase');
+
+    await controller.enable();
+    await controller.disable();
+    messaging.taps.add(null);
+    await pumpEventQueue();
+    expect(c.read(newDisputeTapsProvider), 0);
+  });
+
   test('once off, a token change is not followed any more', () async {
     final c = container();
     final controller = c.read(pushControllerProvider.notifier);

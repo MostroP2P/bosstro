@@ -17,6 +17,11 @@ final pushMessagingProvider = Provider<PushMessaging>(
   (ref) => FirebasePushMessaging(),
 );
 
+/// Counts the taps on a new-dispute notification made while the app was in
+/// the background. The app listens and opens the pending disputes
+/// (`lib/core/app.dart`); the number itself means nothing.
+final newDisputeTapsProvider = StateProvider<int>((ref) => 0);
+
 /// The notifications of new disputes, as Settings shows them.
 @immutable
 class PushState {
@@ -76,6 +81,7 @@ class PushController extends Notifier<PushState> {
   bool get _canPush => ref.read(canPushProvider);
 
   StreamSubscription<String>? _refreshes;
+  StreamSubscription<void>? _taps;
 
   /// One operation at a time: a toggle tapped twice, or a resume in the
   /// middle of one, must not interleave their steps.
@@ -83,7 +89,10 @@ class PushController extends Notifier<PushState> {
 
   @override
   PushState build() {
-    ref.onDispose(() => _refreshes?.cancel());
+    ref.onDispose(() {
+      _refreshes?.cancel();
+      _taps?.cancel();
+    });
     return const PushState();
   }
 
@@ -179,6 +188,8 @@ class PushController extends Notifier<PushState> {
     // Not awaited: nothing here depends on the cancellation having ended.
     unawaited(_refreshes?.cancel());
     _refreshes = null;
+    unawaited(_taps?.cancel());
+    _taps = null;
     await _quietly(_messaging.deleteToken);
     await _quietly(() => _messaging.setAutoInit(false));
     try {
@@ -203,7 +214,15 @@ class PushController extends Notifier<PushState> {
     }
   });
 
+  /// Follow what the device says while notifications are on: a token that
+  /// replaces the device's, and a tap on a notification.
   void _followRefreshes() {
+    _taps ??= _messaging.newDisputeTaps().listen(
+      (_) => ref.read(newDisputeTapsProvider.notifier).state++,
+      onError: (Object e) {
+        debugPrint('[push] taps not followed: ${e.runtimeType}');
+      },
+    );
     _refreshes ??= _messaging.tokenRefreshes().listen(
       (token) => _serial(() async {
         if (!state.enabled) return;

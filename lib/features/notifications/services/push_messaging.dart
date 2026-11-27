@@ -26,7 +26,15 @@ abstract class PushMessaging {
 
   /// Every token that replaces the device's.
   Stream<String> tokenRefreshes();
+
+  /// One event each time the solver taps a new-dispute notification while
+  /// the app is in the background. A tap that starts the app is not one:
+  /// the app starts on the pending disputes anyway.
+  Stream<void> newDisputeTaps();
 }
+
+/// `data.type` of the push server's new-dispute push.
+const newDisputePushType = 'dispute_new';
 
 /// firebase_messaging 17 deprecates `getToken`, `deleteToken` and
 /// `onTokenRefresh` for `register` / `onRegistered`, which hand out a
@@ -64,6 +72,14 @@ class FirebasePushMessaging implements PushMessaging {
   @override
   Future<void> setAutoInit(bool enabled) async =>
       (await _messaging()).setAutoInitEnabled(enabled);
+
+  @override
+  Stream<void> newDisputeTaps() async* {
+    await _messaging();
+    yield* FirebaseMessaging.onMessageOpenedApp
+        .where((message) => message.data['type'] == newDisputePushType)
+        .map<void>((_) {});
+  }
 
   @override
   Stream<String> tokenRefreshes() async* {
