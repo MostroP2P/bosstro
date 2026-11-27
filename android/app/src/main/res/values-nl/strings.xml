@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="push_dispute_new_title">Nieuw dispuut</string>
+    <string name="push_dispute_new_body">Een dispuut wacht op een solver op je node.</string>
+    <string name="push_disputes_channel_name">Nieuwe disputen</string>
+</resources>

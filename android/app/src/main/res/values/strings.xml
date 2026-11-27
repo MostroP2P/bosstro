@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The new-dispute push notification, which Android shows by itself, while
+     the app is in the background or not running, from the keys the push
+     server sends, and its channel. The same text as the
+     pushDispute* entries of lib/l10n/app_*.arb, the source: a test compares
+     them (test/l10n/push_strings_test.dart). -->
+<resources>
+    <string name="push_dispute_new_title">New dispute</string>
+    <string name="push_dispute_new_body">A dispute is waiting for a solver on your node.</string>
+    <string name="push_disputes_channel_name">New disputes</string>
+</resources>

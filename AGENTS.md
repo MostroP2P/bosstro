@@ -152,6 +152,10 @@ Three tabs, branches of one shell (`lib/core/app_routes.dart`), each keeping its
   week before the dispute opened is "the key opens no message of this dispute" either way.
 - **Files on the web:** decrypting and re-encoding (up to 25 MiB) run on the page's only
   thread, which stops meanwhile, as the take's PoW.
+- **The new-dispute push is in the system's language**, not the one picked in Settings (A3):
+  Android resolves its title, its body and its channel's name from the app's string resources by
+  the phone's locale, and the solver's choice lives in Rust. (The resources are in place; nothing
+  registers for that push yet, issue #61.)
 - The key-handling limits are listed under "Key handling" (2 and 8).
 
 ### Generated code
@@ -382,7 +386,11 @@ most often:
   (`.specify/DESIGN_SYSTEM.md` §9) and of `app`'s translations. Two exceptions, as `app`: the
   startup failure screen (`lib/core/startup_failure.dart`), English and dependency-free because
   it shows when localization or the theme may be what failed, and the AGPL notice on About,
-  which stays in English (a translated licence has no legal force).
+  which stays in English (a translated licence has no legal force). And one copy outside
+  `lib/l10n/`: the title and body of the new-dispute push and the name of its notification
+  channel are also Android string resources (`android/app/src/main/res/values*/strings.xml`),
+  because Android shows them with no Dart running. The ARB entries stay the source, in the same
+  seven languages; `test/l10n/push_strings_test.dart` fails when the two differ.
 
 ## Workflow
 

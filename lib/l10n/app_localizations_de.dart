@@ -1966,4 +1966,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String orderAskedAt(String time) {
     return 'Abgefragt um $time';
   }
+
+  @override
+  String get pushDisputeNewTitle => 'Neuer Streitfall';
+
+  @override
+  String get pushDisputeNewBody =>
+      'Ein Streitfall wartet auf deinem Node auf einen Solver.';
+
+  @override
+  String get pushDisputesChannelName => 'Neue Streitfälle';
 }

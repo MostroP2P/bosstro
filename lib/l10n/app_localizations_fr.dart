@@ -1948,4 +1948,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String orderAskedAt(String time) {
     return 'Consulté à $time';
   }
+
+  @override
+  String get pushDisputeNewTitle => 'Nouveau litige';
+
+  @override
+  String get pushDisputeNewBody =>
+      'Un litige est en attente d\'un solver sur votre nœud.';
+
+  @override
+  String get pushDisputesChannelName => 'Nouveaux litiges';
 }

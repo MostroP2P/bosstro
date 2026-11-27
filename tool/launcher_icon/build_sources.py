@@ -19,6 +19,10 @@ shows two different icons. This script writes:
   (welcome screen, about).
 - `android/app/src/main/res/drawable-*/splash_logo.png`: the disc at 160 dp,
   the launch screen logo below Android 12 (12+ draws the adaptive icon).
+- `android/app/src/main/res/drawable-*/ic_notification.png`: the mascot and
+  its gavel as a white shape on transparent, at 24 dp, for the status bar and
+  the notification itself. Android draws only the shape of such an icon, in
+  the colour it picks, so the emblem's own colours cannot be used there.
 
 Then regenerate the launcher icons from the master (see the
 `flutter_launcher_icons` block in pubspec.yaml). Needs only Pillow:
@@ -52,6 +56,16 @@ SPLASH_LOGO_DP = 160
 # A maskable web icon may be cut to any shape inside a circle of 80 % of its
 # side (the "safe zone"), so the disc sits at that size on its background.
 MASKABLE_SAFE_ZONE = 0.8
+NOTIFICATION_ICON_DP = 24
+# The figure is what is bright in the emblem: the mascot and the gavel, against
+# the dark disc and the black outlines. Between the two values the shape's edge
+# is antialiased.
+FIGURE_DARKEST, FIGURE_BRIGHTEST = 70, 110
+# The gold ring is left out: at 24 dp it would only make the figure smaller.
+# This share of the disc's radius is inside it.
+INSIDE_RING = 0.85
+# Android asks for a 24 dp icon whose shape stays within its inner 20 dp.
+NOTIFICATION_LIVE_AREA = 20 / 24
 ANDROID_DENSITIES = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
 
 
@@ -73,6 +87,31 @@ def disc():
     core = core.resize((SIZE, SIZE), Image.LANCZOS)
     art.putalpha(ImageChops.lighter(art.getchannel('A'), core))
     return art
+
+
+def notification_icon(icon):
+    """The mascot and its gavel as a white shape on a transparent square."""
+    red, green, blue = icon.convert('RGB').split()
+    brightness = ImageChops.lighter(ImageChops.lighter(red, green), blue)
+    span = FIGURE_BRIGHTEST - FIGURE_DARKEST
+    figure = brightness.point(
+        lambda v: max(0, min(255, round((v - FIGURE_DARKEST) * 255 / span)))
+    )
+
+    big = SIZE * SUPERSAMPLING
+    inside = Image.new('L', (big, big), 0)
+    inset = big / 2 * (1 - INSIDE_RING)
+    ImageDraw.Draw(inside).ellipse((inset, inset, big - inset, big - inset), fill=255)
+    figure = ImageChops.multiply(figure, inside.resize((SIZE, SIZE), Image.LANCZOS))
+
+    # Centred on the figure, which does not sit in the middle of the disc.
+    figure = figure.crop(figure.point(lambda a: 255 if a > 128 else 0).getbbox())
+    side = round(max(figure.size) / NOTIFICATION_LIVE_AREA)
+    alpha = Image.new('L', (side, side), 0)
+    alpha.paste(figure, ((side - figure.width) // 2, (side - figure.height) // 2))
+    shape = Image.new('RGBA', (side, side), (255, 255, 255, 0))
+    shape.putalpha(alpha)
+    return shape
 
 
 def scaled(image, side):
@@ -115,6 +154,13 @@ def main():
     res = ROOT / 'android' / 'app' / 'src' / 'main' / 'res'
     for density, factor in ANDROID_DENSITIES.items():
         save_png(icon, round(SPLASH_LOGO_DP * factor), res / f'drawable-{density}' / 'splash_logo.png')
+    notification = notification_icon(icon)
+    for density, factor in ANDROID_DENSITIES.items():
+        save_png(
+            notification,
+            round(NOTIFICATION_ICON_DP * factor),
+            res / f'drawable-{density}' / 'ic_notification.png',
+        )
 
 
 if __name__ == '__main__':

@@ -548,5 +548,8 @@
   "orderDepositsTitle": "Einlagen ({count})",
   "orderBondOfRoot": "{role} (Haupt-Order)",
   "orderFiatRangeValue": "{min} – {max} {code}",
-  "orderAskedAt": "Abgefragt um {time}"
+  "orderAskedAt": "Abgefragt um {time}",
+  "pushDisputeNewTitle": "Neuer Streitfall",
+  "pushDisputeNewBody": "Ein Streitfall wartet auf deinem Node auf einen Solver.",
+  "pushDisputesChannelName": "Neue Streitfälle"
 }

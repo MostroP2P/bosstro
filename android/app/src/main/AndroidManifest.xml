@@ -9,6 +9,10 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- Showing a notification (Android 13+): the new-dispute push. Asked for
+         when the solver turns notifications on, never at startup. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- No Auto Backup and no device transfer: the solver key is Keystore-bound
          and must never be copied to Google. tools:replace keeps a merged
          library manifest from turning it back on. -->
@@ -47,6 +51,31 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Firebase Cloud Messaging asks Google for a device token as soon as
+             the app starts, unless told not to. Nothing is asked until the
+             solver turns notifications on. With this off Firebase does not
+             keep the token fresh by itself either, so turning notifications
+             on has to turn it on at runtime (`setAutoInitEnabled`, which
+             outlives a restart and overrides this), and turning them off has
+             to turn it off again. -->
+        <meta-data
+            android:name="firebase_messaging_auto_init_enabled"
+            android:value="false" />
+        <!-- What Android draws for a push that names no icon, as the new-dispute
+             push: the mascot's shape (tool/launcher_icon/build_sources.py), in
+             the app's accent. Without the icon it uses the launcher icon, of
+             which Android keeps only the outline. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+        <!-- The channel of a push that names none, or one this build does not
+             have. Created in MainActivity.kt. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="bosstro_disputes" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

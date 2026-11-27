@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="push_dispute_new_title">Nueva disputa</string>
+    <string name="push_dispute_new_body">Hay una disputa esperando solver en tu nodo.</string>
+    <string name="push_disputes_channel_name">Nuevas disputas</string>
+</resources>
