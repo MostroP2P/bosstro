@@ -12,6 +12,7 @@ import 'api/observer.dart';
 import 'api/order_info.dart';
 import 'api/relays.dart';
 import 'api/resolve.dart';
+import 'api/serbero.dart';
 import 'api/settings.dart';
 import 'api/solver.dart';
 import 'api/take.dart';
@@ -77,7 +78,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1110505310;
+  int get rustContentHash => 2144809293;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -106,6 +107,10 @@ abstract class RustLibApi extends BaseApi {
 
   Future<RelayInfo?> crateApiRelaysRelayStatusStreamNext({
     required RelayStatusStream that,
+  });
+
+  Future<String?> crateApiSerberoSerberoUpdateStreamNext({
+    required SerberoUpdateStream that,
   });
 
   String? crateApiNodesActiveNode();
@@ -146,6 +151,8 @@ abstract class RustLibApi extends BaseApi {
 
   Future<List<RelayInfo>> crateApiRelaysGetRelays();
 
+  Future<String?> crateApiSerberoGetSerberoNpub({required String node});
+
   Future<InProgressDisputes?> crateApiTakeInProgressDisputes();
 
   Future<void> crateApiInitApp();
@@ -181,6 +188,8 @@ abstract class RustLibApi extends BaseApi {
   Future<DisputeUpdateStream> crateApiDisputesOnDisputeUpdates();
 
   Future<RelayStatusStream> crateApiRelaysOnRelayStatusChanged();
+
+  Future<SerberoUpdateStream> crateApiSerberoOnSerberoUpdates();
 
   Future<OpenedAttachment> crateApiChatOpenChatAttachment({
     required String disputeId,
@@ -241,7 +250,16 @@ abstract class RustLibApi extends BaseApi {
     required String text,
   });
 
+  Future<SerberoMediation?> crateApiSerberoSerberoMediation({
+    required String disputeId,
+  });
+
   Future<void> crateApiSettingsSetLanguage({String? code});
+
+  Future<String?> crateApiSerberoSetSerberoPubkey({
+    required String node,
+    String? pubkey,
+  });
 
   Future<SolverPermission> crateApiTakeSolverPermissionDefault();
 
@@ -301,6 +319,15 @@ abstract class RustLibApi extends BaseApi {
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_RelayStatusStreamPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_SerberoUpdateStream;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_SerberoUpdateStream;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_SerberoUpdateStreamPtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -492,12 +519,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String?> crateApiSerberoSerberoUpdateStreamNext({
+    required SerberoUpdateStream that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSerberoSerberoUpdateStreamNextConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSerberoSerberoUpdateStreamNextConstMeta =>
+      const TaskConstMeta(
+        debugName: "SerberoUpdateStream_next",
+        argNames: ["that"],
+      );
+
+  @override
   String? crateApiNodesActiveNode() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_String,
@@ -527,7 +590,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 8,
             port: port_,
           );
         },
@@ -558,7 +621,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 9,
             port: port_,
           );
         },
@@ -582,7 +645,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -607,7 +670,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 11,
             port: port_,
           );
         },
@@ -635,7 +698,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 12,
             port: port_,
           );
         },
@@ -667,7 +730,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 13,
             port: port_,
           );
         },
@@ -693,7 +756,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_new_solver_account,
@@ -721,7 +784,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 15,
             port: port_,
           );
         },
@@ -749,7 +812,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 16,
             port: port_,
           );
         },
@@ -777,7 +840,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 17,
             port: port_,
           );
         },
@@ -807,7 +870,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 18,
             port: port_,
           );
         },
@@ -834,7 +897,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -864,7 +927,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 20,
             port: port_,
           );
         },
@@ -894,7 +957,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -913,6 +976,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_relays", argNames: []);
 
   @override
+  Future<String?> crateApiSerberoGetSerberoNpub({required String node}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(node, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 22,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiSerberoGetSerberoNpubConstMeta,
+        argValues: [node],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSerberoGetSerberoNpubConstMeta =>
+      const TaskConstMeta(debugName: "get_serbero_npub", argNames: ["node"]);
+
+  @override
   Future<InProgressDisputes?> crateApiTakeInProgressDisputes() {
     return handler.executeNormal(
       NormalTask(
@@ -921,7 +1012,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 23,
             port: port_,
           );
         },
@@ -948,7 +1039,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 24,
             port: port_,
           );
         },
@@ -976,7 +1067,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1003,7 +1094,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1028,7 +1119,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(text, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
@@ -1053,7 +1144,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1083,7 +1174,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1113,7 +1204,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 30,
             port: port_,
           );
         },
@@ -1140,7 +1231,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 29,
+            funcId: 31,
             port: port_,
           );
         },
@@ -1170,7 +1261,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1197,7 +1288,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1225,7 +1316,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 32,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1253,7 +1344,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 35,
             port: port_,
           );
         },
@@ -1284,7 +1375,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 34,
+            funcId: 36,
             port: port_,
           );
         },
@@ -1312,7 +1403,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 35,
+            funcId: 37,
             port: port_,
           );
         },
@@ -1332,6 +1423,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "on_relay_status_changed", argNames: []);
 
   @override
+  Future<SerberoUpdateStream> crateApiSerberoOnSerberoUpdates() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 38,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSerberoOnSerberoUpdatesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSerberoOnSerberoUpdatesConstMeta =>
+      const TaskConstMeta(debugName: "on_serbero_updates", argNames: []);
+
+  @override
   Future<OpenedAttachment> crateApiChatOpenChatAttachment({
     required String disputeId,
     required ChatParty party,
@@ -1347,7 +1466,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 36,
+            funcId: 39,
             port: port_,
           );
         },
@@ -1382,7 +1501,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 37,
+            funcId: 40,
             port: port_,
           );
         },
@@ -1412,7 +1531,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 38,
+            funcId: 41,
             port: port_,
           );
         },
@@ -1437,7 +1556,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_list_prim_u_8_loose(secret, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1462,7 +1581,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 40,
+            funcId: 43,
             port: port_,
           );
         },
@@ -1492,7 +1611,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 41,
+            funcId: 44,
             port: port_,
           );
         },
@@ -1522,7 +1641,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 42,
+            funcId: 45,
             port: port_,
           );
         },
@@ -1549,7 +1668,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 43,
+            funcId: 46,
             port: port_,
           );
         },
@@ -1579,7 +1698,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 44,
+            funcId: 47,
             port: port_,
           );
         },
@@ -1607,7 +1726,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 45,
+            funcId: 48,
             port: port_,
           );
         },
@@ -1638,7 +1757,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 46,
+            funcId: 49,
             port: port_,
           );
         },
@@ -1672,7 +1791,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 47,
+            funcId: 50,
             port: port_,
           );
         },
@@ -1709,7 +1828,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 48,
+            funcId: 51,
             port: port_,
           );
         },
@@ -1740,7 +1859,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 49,
+            funcId: 52,
             port: port_,
           );
         },
@@ -1781,7 +1900,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 50,
+            funcId: 53,
             port: port_,
           );
         },
@@ -1818,7 +1937,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 51,
+            funcId: 54,
             port: port_,
           );
         },
@@ -1840,6 +1959,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<SerberoMediation?> crateApiSerberoSerberoMediation({
+    required String disputeId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(disputeId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 55,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_serbero_mediation,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiSerberoSerberoMediationConstMeta,
+        argValues: [disputeId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSerberoSerberoMediationConstMeta =>
+      const TaskConstMeta(
+        debugName: "serbero_mediation",
+        argNames: ["disputeId"],
+      );
+
+  @override
   Future<void> crateApiSettingsSetLanguage({String? code}) {
     return handler.executeNormal(
       NormalTask(
@@ -1849,7 +2001,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 52,
+            funcId: 56,
             port: port_,
           );
         },
@@ -1868,6 +2020,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "set_language", argNames: ["code"]);
 
   @override
+  Future<String?> crateApiSerberoSetSerberoPubkey({
+    required String node,
+    String? pubkey,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(node, serializer);
+          sse_encode_opt_String(pubkey, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 57,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiSerberoSetSerberoPubkeyConstMeta,
+        argValues: [node, pubkey],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSerberoSetSerberoPubkeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_serbero_pubkey",
+        argNames: ["node", "pubkey"],
+      );
+
+  @override
   Future<SolverPermission> crateApiTakeSolverPermissionDefault() {
     return handler.executeNormal(
       NormalTask(
@@ -1876,7 +2063,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 53,
+            funcId: 58,
             port: port_,
           );
         },
@@ -1903,7 +2090,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 54,
+            funcId: 59,
             port: port_,
           );
         },
@@ -1930,7 +2117,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 55,
+            funcId: 60,
             port: port_,
           );
         },
@@ -1957,7 +2144,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 56,
+            funcId: 61,
             port: port_,
           );
         },
@@ -1984,7 +2171,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 57,
+            funcId: 62,
             port: port_,
           );
         },
@@ -2012,7 +2199,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 58,
+            funcId: 63,
             port: port_,
           );
         },
@@ -2039,7 +2226,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 59,
+            funcId: 64,
             port: port_,
           );
         },
@@ -2097,6 +2284,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   get rust_arc_decrement_strong_count_RelayStatusStream =>
       wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRelayStatusStream;
 
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_SerberoUpdateStream =>
+      wire.rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_SerberoUpdateStream =>
+      wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -2151,6 +2346,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SerberoUpdateStream
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SerberoUpdateStreamImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   AttachmentProgressStream
   dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAttachmentProgressStream(
     dynamic raw,
@@ -2198,6 +2402,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SerberoUpdateStream
+  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SerberoUpdateStreamImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   AttachmentProgressStream
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAttachmentProgressStream(
     dynamic raw,
@@ -2242,6 +2455,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return RelayStatusStreamImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  SerberoUpdateStream
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SerberoUpdateStreamImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -2460,6 +2682,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ResolvedAs dco_decode_box_autoadd_resolved_as(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_resolved_as(raw);
+  }
+
+  @protected
+  SerberoMediation dco_decode_box_autoadd_serbero_mediation(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_serbero_mediation(raw);
+  }
+
+  @protected
+  SerberoNote dco_decode_box_autoadd_serbero_note(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_serbero_note(raw);
+  }
+
+  @protected
+  SerberoSpeaker dco_decode_box_autoadd_serbero_speaker(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_serbero_speaker(raw);
   }
 
   @protected
@@ -2791,6 +3031,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<SerberoLine> dco_decode_list_serbero_line(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_serbero_line).toList();
+  }
+
+  @protected
+  List<SerberoUpdateView> dco_decode_list_serbero_update_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_serbero_update_view).toList();
+  }
+
+  @protected
   List<TakenDisputeSummary> dco_decode_list_taken_dispute_summary(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>)
@@ -3110,6 +3362,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SerberoMediation? dco_decode_opt_box_autoadd_serbero_mediation(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_serbero_mediation(raw);
+  }
+
+  @protected
+  SerberoNote? dco_decode_opt_box_autoadd_serbero_note(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_serbero_note(raw);
+  }
+
+  @protected
+  SerberoSpeaker? dco_decode_opt_box_autoadd_serbero_speaker(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_serbero_speaker(raw);
+  }
+
+  @protected
   SolverKeyInfo? dco_decode_opt_box_autoadd_solver_key_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_solver_key_info(raw);
@@ -3346,6 +3616,77 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SerberoHeadline dco_decode_serbero_headline(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SerberoHeadline.values[raw as int];
+  }
+
+  @protected
+  SerberoLine dco_decode_serbero_line(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return SerberoLine(
+      time: dco_decode_String(arr[0]),
+      at: dco_decode_opt_box_autoadd_i_64(arr[1]),
+      speaker: dco_decode_opt_box_autoadd_serbero_speaker(arr[2]),
+      text: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  SerberoMediation dco_decode_serbero_mediation(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return SerberoMediation(
+      disputeId: dco_decode_String(arr[0]),
+      brief: dco_decode_opt_box_autoadd_serbero_note(arr[1]),
+      transcript: dco_decode_list_serbero_line(arr[2]),
+      transcriptParts: dco_decode_u_32(arr[3]),
+      transcriptTotal: dco_decode_u_32(arr[4]),
+      transcriptSentAt: dco_decode_opt_box_autoadd_i_64(arr[5]),
+      updates: dco_decode_list_serbero_update_view(arr[6]),
+      finalReport: dco_decode_opt_box_autoadd_serbero_note(arr[7]),
+    );
+  }
+
+  @protected
+  SerberoNote dco_decode_serbero_note(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return SerberoNote(
+      subject: dco_decode_String(arr[0]),
+      headline: dco_decode_serbero_headline(arr[1]),
+      detail: dco_decode_String(arr[2]),
+      body: dco_decode_String(arr[3]),
+      sentAt: dco_decode_i_64(arr[4]),
+    );
+  }
+
+  @protected
+  SerberoSpeaker dco_decode_serbero_speaker(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SerberoSpeaker.values[raw as int];
+  }
+
+  @protected
+  SerberoUpdateView dco_decode_serbero_update_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return SerberoUpdateView(
+      sentAt: dco_decode_i_64(arr[0]),
+      lines: dco_decode_list_serbero_line(arr[1]),
+    );
+  }
+
+  @protected
   SolverKeyError dco_decode_solver_key_error(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return SolverKeyError.values[raw as int];
@@ -3527,6 +3868,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SerberoUpdateStream
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SerberoUpdateStreamImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   AttachmentProgressStream
   sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAttachmentProgressStream(
     SseDeserializer deserializer,
@@ -3587,6 +3940,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SerberoUpdateStream
+  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SerberoUpdateStreamImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   AttachmentProgressStream
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAttachmentProgressStream(
     SseDeserializer deserializer,
@@ -3641,6 +4006,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return RelayStatusStreamImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  SerberoUpdateStream
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return SerberoUpdateStreamImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -3894,6 +4271,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ResolvedAs sse_decode_box_autoadd_resolved_as(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_resolved_as(deserializer));
+  }
+
+  @protected
+  SerberoMediation sse_decode_box_autoadd_serbero_mediation(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_serbero_mediation(deserializer));
+  }
+
+  @protected
+  SerberoNote sse_decode_box_autoadd_serbero_note(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_serbero_note(deserializer));
+  }
+
+  @protected
+  SerberoSpeaker sse_decode_box_autoadd_serbero_speaker(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_serbero_speaker(deserializer));
   }
 
   @protected
@@ -4322,6 +4723,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <RelayInfo>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_relay_info(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<SerberoLine> sse_decode_list_serbero_line(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <SerberoLine>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_serbero_line(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<SerberoUpdateView> sse_decode_list_serbero_update_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <SerberoUpdateView>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_serbero_update_view(deserializer));
     }
     return ans_;
   }
@@ -4865,6 +5292,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SerberoMediation? sse_decode_opt_box_autoadd_serbero_mediation(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_serbero_mediation(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  SerberoNote? sse_decode_opt_box_autoadd_serbero_note(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_serbero_note(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  SerberoSpeaker? sse_decode_opt_box_autoadd_serbero_speaker(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_serbero_speaker(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   SolverKeyInfo? sse_decode_opt_box_autoadd_solver_key_info(
     SseDeserializer deserializer,
   ) {
@@ -5193,6 +5659,85 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SerberoHeadline sse_decode_serbero_headline(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return SerberoHeadline.values[inner];
+  }
+
+  @protected
+  SerberoLine sse_decode_serbero_line(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_time = sse_decode_String(deserializer);
+    var var_at = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_speaker = sse_decode_opt_box_autoadd_serbero_speaker(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    return SerberoLine(
+      time: var_time,
+      at: var_at,
+      speaker: var_speaker,
+      text: var_text,
+    );
+  }
+
+  @protected
+  SerberoMediation sse_decode_serbero_mediation(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_disputeId = sse_decode_String(deserializer);
+    var var_brief = sse_decode_opt_box_autoadd_serbero_note(deserializer);
+    var var_transcript = sse_decode_list_serbero_line(deserializer);
+    var var_transcriptParts = sse_decode_u_32(deserializer);
+    var var_transcriptTotal = sse_decode_u_32(deserializer);
+    var var_transcriptSentAt = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_updates = sse_decode_list_serbero_update_view(deserializer);
+    var var_finalReport = sse_decode_opt_box_autoadd_serbero_note(deserializer);
+    return SerberoMediation(
+      disputeId: var_disputeId,
+      brief: var_brief,
+      transcript: var_transcript,
+      transcriptParts: var_transcriptParts,
+      transcriptTotal: var_transcriptTotal,
+      transcriptSentAt: var_transcriptSentAt,
+      updates: var_updates,
+      finalReport: var_finalReport,
+    );
+  }
+
+  @protected
+  SerberoNote sse_decode_serbero_note(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_subject = sse_decode_String(deserializer);
+    var var_headline = sse_decode_serbero_headline(deserializer);
+    var var_detail = sse_decode_String(deserializer);
+    var var_body = sse_decode_String(deserializer);
+    var var_sentAt = sse_decode_i_64(deserializer);
+    return SerberoNote(
+      subject: var_subject,
+      headline: var_headline,
+      detail: var_detail,
+      body: var_body,
+      sentAt: var_sentAt,
+    );
+  }
+
+  @protected
+  SerberoSpeaker sse_decode_serbero_speaker(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return SerberoSpeaker.values[inner];
+  }
+
+  @protected
+  SerberoUpdateView sse_decode_serbero_update_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sentAt = sse_decode_i_64(deserializer);
+    var var_lines = sse_decode_list_serbero_line(deserializer);
+    return SerberoUpdateView(sentAt: var_sentAt, lines: var_lines);
+  }
+
+  @protected
   SolverKeyError sse_decode_solver_key_error(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -5393,6 +5938,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+    SerberoUpdateStream self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SerberoUpdateStreamImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAttachmentProgressStream(
     AttachmentProgressStream self,
     SseSerializer serializer,
@@ -5458,6 +6016,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+    SerberoUpdateStream self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SerberoUpdateStreamImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAttachmentProgressStream(
     AttachmentProgressStream self,
     SseSerializer serializer,
@@ -5517,6 +6088,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as RelayStatusStreamImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+    SerberoUpdateStream self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as SerberoUpdateStreamImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
@@ -5808,6 +6392,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_resolved_as(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_serbero_mediation(
+    SerberoMediation self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_serbero_mediation(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_serbero_note(
+    SerberoNote self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_serbero_note(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_serbero_speaker(
+    SerberoSpeaker self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_serbero_speaker(self, serializer);
   }
 
   @protected
@@ -6171,6 +6782,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_relay_info(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_serbero_line(
+    List<SerberoLine> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_serbero_line(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_serbero_update_view(
+    List<SerberoUpdateView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_serbero_update_view(item, serializer);
     }
   }
 
@@ -6656,6 +7291,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_serbero_mediation(
+    SerberoMediation? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_serbero_mediation(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_serbero_note(
+    SerberoNote? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_serbero_note(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_serbero_speaker(
+    SerberoSpeaker? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_serbero_speaker(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_solver_key_info(
     SolverKeyInfo? self,
     SseSerializer serializer,
@@ -6903,6 +7577,69 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_resolved_as(ResolvedAs self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_serbero_headline(
+    SerberoHeadline self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_serbero_line(SerberoLine self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.time, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.at, serializer);
+    sse_encode_opt_box_autoadd_serbero_speaker(self.speaker, serializer);
+    sse_encode_String(self.text, serializer);
+  }
+
+  @protected
+  void sse_encode_serbero_mediation(
+    SerberoMediation self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.disputeId, serializer);
+    sse_encode_opt_box_autoadd_serbero_note(self.brief, serializer);
+    sse_encode_list_serbero_line(self.transcript, serializer);
+    sse_encode_u_32(self.transcriptParts, serializer);
+    sse_encode_u_32(self.transcriptTotal, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.transcriptSentAt, serializer);
+    sse_encode_list_serbero_update_view(self.updates, serializer);
+    sse_encode_opt_box_autoadd_serbero_note(self.finalReport, serializer);
+  }
+
+  @protected
+  void sse_encode_serbero_note(SerberoNote self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.subject, serializer);
+    sse_encode_serbero_headline(self.headline, serializer);
+    sse_encode_String(self.detail, serializer);
+    sse_encode_String(self.body, serializer);
+    sse_encode_i_64(self.sentAt, serializer);
+  }
+
+  @protected
+  void sse_encode_serbero_speaker(
+    SerberoSpeaker self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_serbero_update_view(
+    SerberoUpdateView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self.sentAt, serializer);
+    sse_encode_list_serbero_line(self.lines, serializer);
   }
 
   @protected
@@ -7184,4 +7921,42 @@ class RelayStatusStreamImpl extends RustOpaque implements RelayStatusStream {
   /// The next relay that changed, or `None` once the pool is gone.
   Future<RelayInfo?> next() =>
       RustLib.instance.api.crateApiRelaysRelayStatusStreamNext(that: this);
+}
+
+@sealed
+class SerberoUpdateStreamImpl extends RustOpaque
+    implements SerberoUpdateStream {
+  // Not to be used by end users
+  SerberoUpdateStreamImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  SerberoUpdateStreamImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib
+            .instance
+            .api
+            .rust_arc_increment_strong_count_SerberoUpdateStream,
+    rustArcDecrementStrongCount:
+        RustLib
+            .instance
+            .api
+            .rust_arc_decrement_strong_count_SerberoUpdateStream,
+    rustArcDecrementStrongCountPtr:
+        RustLib
+            .instance
+            .api
+            .rust_arc_decrement_strong_count_SerberoUpdateStreamPtr,
+  );
+
+  /// The next dispute id whose reports changed on the active node, `""`
+  /// when this reader fell behind (read again whatever is shown), or
+  /// `None` once the router is gone.
+  Future<String?> next() =>
+      RustLib.instance.api.crateApiSerberoSerberoUpdateStreamNext(that: this);
 }

@@ -12,7 +12,9 @@ import 'package:bosstro/features/nodes/providers/node_providers.dart';
 import 'package:bosstro/features/nodes/providers/relay_providers.dart';
 import 'package:bosstro/features/settings/models/languages.dart';
 import 'package:bosstro/features/settings/providers/language_provider.dart';
+import 'package:bosstro/features/settings/providers/serbero_provider.dart';
 import 'package:bosstro/features/settings/widgets/language_sheet.dart';
+import 'package:bosstro/features/settings/widgets/serbero_dialog.dart';
 import 'package:bosstro/features/settings/widgets/settings_row.dart';
 import 'package:bosstro/features/solver_key/providers/solver_key_providers.dart';
 import 'package:bosstro/features/solver_key/widgets/key_widgets.dart';
@@ -28,7 +30,7 @@ import 'package:bosstro/shared/widgets/tab_app_bar.dart';
 /// whether this key is a solver there and its permission (once the node's
 /// answers told); the solver key (npub, backup, and log out, the one
 /// destructive row, last); and the app's version as a quiet line at the
-/// end. Trusted senders arrive with phase 5b.
+/// end. The node group also holds the Serbero key trusted there (D13).
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -42,6 +44,7 @@ class SettingsScreen extends ConsumerWidget {
     final entry = ref.watch(activeNodeEntryProvider);
     final link = ref.watch(relayLinkProvider);
     final standing = ref.watch(solverStandingProvider).valueOrNull;
+    final serbero = ref.watch(serberoNpubProvider).valueOrNull;
     final solverValue = switch (standing?.status) {
       SolverStatus.yes => l10n.settingsSolverYes,
       SolverStatus.no => l10n.settingsSolverNo,
@@ -127,6 +130,22 @@ class SettingsScreen extends ConsumerWidget {
                       valueIsData: true,
                       onTap: () => context.push(AppRoute.relays),
                     ),
+                    if (active != null)
+                      SettingsRow(
+                        icon: Icons.smart_toy_outlined,
+                        label: l10n.settingsSerbero,
+                        value:
+                            serbero == null
+                                ? l10n.settingsSerberoNone
+                                : shortOrderId(serbero, head: 10, tail: 6),
+                        valueIsData: serbero != null,
+                        onTap:
+                            () => showSerberoDialog(
+                              context,
+                              node: active,
+                              current: serbero,
+                            ),
+                      ),
                     // Known only from the node's answers (D12).
                     if (active != null && solverValue != null)
                       OrderDataRow(

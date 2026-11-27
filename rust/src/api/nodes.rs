@@ -93,7 +93,7 @@ pub(crate) struct NodeMetadata {
 
 /// Normalize `input` (64-char hex or `npub1…`, optionally `nostr:`-prefixed)
 /// to lowercase hex.
-fn parse_node_pubkey(input: &str) -> Result<String> {
+pub(crate) fn parse_node_pubkey(input: &str) -> Result<String> {
     let trimmed = input.trim();
     let trimmed = trimmed.strip_prefix("nostr:").unwrap_or(trimmed);
     if trimmed.to_ascii_lowercase().starts_with("nsec") {
@@ -485,6 +485,8 @@ pub async fn select_active_node(pubkey: String) -> Result<()> {
     crate::rt::spawn(crate::mostro::replies::follow());
     // And the chats: the previous node's close.
     crate::rt::spawn(crate::chat::router::follow());
+    // And Serbero's reports, from the Serbero trusted on the new node.
+    crate::rt::spawn(crate::serbero::router::follow());
     Ok(())
 }
 

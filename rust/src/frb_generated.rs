@@ -28,6 +28,7 @@
 use crate::api::chat::*;
 use crate::api::disputes::*;
 use crate::api::relays::*;
+use crate::api::serbero::*;
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
@@ -40,7 +41,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1110505310;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2144809293;
 
 // Section: executor
 
@@ -327,6 +328,64 @@ fn wire__crate__api__relays__RelayStatusStream_next_impl(
                         let mut api_that_guard = api_that_guard.unwrap();
                         let output_ok = Result::<_, ()>::Ok(
                             crate::api::relays::RelayStatusStream::next(&mut *api_that_guard).await,
+                        )?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__serbero__SerberoUpdateStream_next_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "SerberoUpdateStream_next",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SerberoUpdateStream>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, ()>(
+                    (move || async move {
+                        let mut api_that_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_that, 0, true,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => {
+                                    api_that_guard =
+                                        Some(api_that.lockable_decode_async_ref_mut().await)
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                        let mut api_that_guard = api_that_guard.unwrap();
+                        let output_ok = Result::<_, ()>::Ok(
+                            crate::api::serbero::SerberoUpdateStream::next(&mut *api_that_guard)
+                                .await,
                         )?;
                         Ok(output_ok)
                     })()
@@ -854,6 +913,42 @@ fn wire__crate__api__relays__get_relays_impl(
         },
     )
 }
+fn wire__crate__api__serbero__get_serbero_npub_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_serbero_npub",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_node = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::serbero::get_serbero_npub(api_node).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__take__in_progress_disputes_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1364,6 +1459,38 @@ fn wire__crate__api__relays__on_relay_status_changed_impl(
                     })()
                     .await,
                 )
+            }
+        },
+    )
+}
+fn wire__crate__api__serbero__on_serbero_updates_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "on_serbero_updates",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(crate::api::serbero::on_serbero_updates())?;
+                    Ok(output_ok)
+                })())
             }
         },
     )
@@ -1974,6 +2101,43 @@ fn wire__crate__api__chat__send_chat_message_impl(
         },
     )
 }
+fn wire__crate__api__serbero__serbero_mediation_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "serbero_mediation",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_dispute_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::serbero::serbero_mediation(api_dispute_id).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__settings__set_language_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2002,6 +2166,44 @@ fn wire__crate__api__settings__set_language_impl(
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let output_ok = crate::api::settings::set_language(api_code).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__serbero__set_serbero_pubkey_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_serbero_pubkey",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_node = <String>::sse_decode(&mut deserializer);
+            let api_pubkey = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::serbero::set_serbero_pubkey(api_node, api_pubkey).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2271,6 +2473,9 @@ flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
 flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
     flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RelayStatusStream>
 );
+flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
+    flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SerberoUpdateStream>
+);
 
 // Section: dart2rust
 
@@ -2332,6 +2537,16 @@ impl SseDecode for RelayStatusStream {
     }
 }
 
+impl SseDecode for SerberoUpdateStream {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SerberoUpdateStream>,
+        >>::sse_decode(deserializer);
+        return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
+    }
+}
+
 impl SseDecode
     for RustOpaqueMoi<
         flutter_rust_bridge::for_generated::RustAutoOpaqueInner<AttachmentProgressStream>,
@@ -2378,6 +2593,16 @@ impl SseDecode
 
 impl SseDecode
     for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RelayStatusStream>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <usize>::sse_decode(deserializer);
+        return decode_rust_opaque_moi(inner);
+    }
+}
+
+impl SseDecode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SerberoUpdateStream>>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2990,6 +3215,32 @@ impl SseDecode for Vec<crate::api::relays::RelayInfo> {
     }
 }
 
+impl SseDecode for Vec<crate::api::serbero::SerberoLine> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::serbero::SerberoLine>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::serbero::SerberoUpdateView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::serbero::SerberoUpdateView>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::take::TakenDisputeSummary> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3527,6 +3778,43 @@ impl SseDecode for Option<crate::api::resolve::ResolvedAs> {
     }
 }
 
+impl SseDecode for Option<crate::api::serbero::SerberoMediation> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::serbero::SerberoMediation>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::serbero::SerberoNote> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::serbero::SerberoNote>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::serbero::SerberoSpeaker> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::serbero::SerberoSpeaker>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::solver::SolverKeyInfo> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3977,6 +4265,107 @@ impl SseDecode for crate::api::resolve::ResolvedAs {
     }
 }
 
+impl SseDecode for crate::api::serbero::SerberoHeadline {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::serbero::SerberoHeadline::HandedOff,
+            1 => crate::api::serbero::SerberoHeadline::GuidanceSent,
+            2 => crate::api::serbero::SerberoHeadline::Resolved,
+            3 => crate::api::serbero::SerberoHeadline::Other,
+            _ => unreachable!("Invalid variant for SerberoHeadline: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::serbero::SerberoLine {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_time = <String>::sse_decode(deserializer);
+        let mut var_at = <Option<i64>>::sse_decode(deserializer);
+        let mut var_speaker =
+            <Option<crate::api::serbero::SerberoSpeaker>>::sse_decode(deserializer);
+        let mut var_text = <String>::sse_decode(deserializer);
+        return crate::api::serbero::SerberoLine {
+            time: var_time,
+            at: var_at,
+            speaker: var_speaker,
+            text: var_text,
+        };
+    }
+}
+
+impl SseDecode for crate::api::serbero::SerberoMediation {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_disputeId = <String>::sse_decode(deserializer);
+        let mut var_brief = <Option<crate::api::serbero::SerberoNote>>::sse_decode(deserializer);
+        let mut var_transcript = <Vec<crate::api::serbero::SerberoLine>>::sse_decode(deserializer);
+        let mut var_transcriptParts = <u32>::sse_decode(deserializer);
+        let mut var_transcriptTotal = <u32>::sse_decode(deserializer);
+        let mut var_transcriptSentAt = <Option<i64>>::sse_decode(deserializer);
+        let mut var_updates =
+            <Vec<crate::api::serbero::SerberoUpdateView>>::sse_decode(deserializer);
+        let mut var_finalReport =
+            <Option<crate::api::serbero::SerberoNote>>::sse_decode(deserializer);
+        return crate::api::serbero::SerberoMediation {
+            dispute_id: var_disputeId,
+            brief: var_brief,
+            transcript: var_transcript,
+            transcript_parts: var_transcriptParts,
+            transcript_total: var_transcriptTotal,
+            transcript_sent_at: var_transcriptSentAt,
+            updates: var_updates,
+            final_report: var_finalReport,
+        };
+    }
+}
+
+impl SseDecode for crate::api::serbero::SerberoNote {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_subject = <String>::sse_decode(deserializer);
+        let mut var_headline = <crate::api::serbero::SerberoHeadline>::sse_decode(deserializer);
+        let mut var_detail = <String>::sse_decode(deserializer);
+        let mut var_body = <String>::sse_decode(deserializer);
+        let mut var_sentAt = <i64>::sse_decode(deserializer);
+        return crate::api::serbero::SerberoNote {
+            subject: var_subject,
+            headline: var_headline,
+            detail: var_detail,
+            body: var_body,
+            sent_at: var_sentAt,
+        };
+    }
+}
+
+impl SseDecode for crate::api::serbero::SerberoSpeaker {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::serbero::SerberoSpeaker::Buyer,
+            1 => crate::api::serbero::SerberoSpeaker::Seller,
+            2 => crate::api::serbero::SerberoSpeaker::SerberoToBuyer,
+            3 => crate::api::serbero::SerberoSpeaker::SerberoToSeller,
+            _ => unreachable!("Invalid variant for SerberoSpeaker: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::serbero::SerberoUpdateView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_sentAt = <i64>::sse_decode(deserializer);
+        let mut var_lines = <Vec<crate::api::serbero::SerberoLine>>::sse_decode(deserializer);
+        return crate::api::serbero::SerberoUpdateView {
+            sent_at: var_sentAt,
+            lines: var_lines,
+        };
+    }
+}
+
 impl SseDecode for crate::api::solver::SolverKeyError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4181,111 +4570,121 @@ fn pde_ffi_dispatcher_primary_impl(
         5 => {
             wire__crate__api__relays__RelayStatusStream_next_impl(port, ptr, rust_vec_len, data_len)
         }
-        7 => {
+        6 => wire__crate__api__serbero__SerberoUpdateStream_next_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        8 => {
             wire__crate__api__nodes__add_custom_mostro_node_impl(port, ptr, rust_vec_len, data_len)
         }
-        8 => wire__crate__api__relays__add_relay_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__resolve__bond_slash_default_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__node_info__cached_node_info_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__chat__chat_thread_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__take__dispute_detail_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__node_info__fetch_node_info_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__nodes__forget_mostro_node_picture_impl(
+        9 => wire__crate__api__relays__add_relay_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__resolve__bond_slash_default_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__node_info__cached_node_info_impl(port, ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__chat__chat_thread_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__take__dispute_detail_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__node_info__fetch_node_info_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__nodes__forget_mostro_node_picture_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => {
+        18 => {
             wire__crate__api__relays__get_connection_state_impl(port, ptr, rust_vec_len, data_len)
         }
-        18 => wire__crate__api__settings__get_language_impl(port, ptr, rust_vec_len, data_len),
-        19 => {
+        19 => wire__crate__api__settings__get_language_impl(port, ptr, rust_vec_len, data_len),
+        20 => {
             wire__crate__api__nodes__get_mostro_node_picture_impl(port, ptr, rust_vec_len, data_len)
         }
-        20 => wire__crate__api__relays__get_relays_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__take__in_progress_disputes_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__init_db_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__relays__initialize_relays_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__nodes__list_mostro_nodes_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__solver__load_solver_key_impl(port, ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__order_info__lookup_order_impl(port, ptr, rust_vec_len, data_len),
-        29 => {
+        21 => wire__crate__api__relays__get_relays_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__serbero__get_serbero_npub_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__take__in_progress_disputes_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__init_db_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__relays__initialize_relays_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__nodes__list_mostro_nodes_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__solver__load_solver_key_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__order_info__lookup_order_impl(port, ptr, rust_vec_len, data_len),
+        31 => {
             wire__crate__api__node_info__node_info_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        30 => wire__crate__api__observer__observed_chat_impl(port, ptr, rust_vec_len, data_len),
-        31 => {
+        32 => wire__crate__api__observer__observed_chat_impl(port, ptr, rust_vec_len, data_len),
+        33 => {
             wire__crate__api__chat__on_attachment_progress_impl(port, ptr, rust_vec_len, data_len)
         }
-        32 => wire__crate__api__chat__on_chat_updates_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__relays__on_connection_state_changed_impl(
+        34 => wire__crate__api__chat__on_chat_updates_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__relays__on_connection_state_changed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => {
+        36 => {
             wire__crate__api__disputes__on_dispute_updates_impl(port, ptr, rust_vec_len, data_len)
         }
-        35 => wire__crate__api__relays__on_relay_status_changed_impl(
+        37 => wire__crate__api__relays__on_relay_status_changed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => wire__crate__api__chat__open_chat_attachment_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__observer__paste_shared_key_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__disputes__pending_disputes_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__node_info__protocol_support_default_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        41 => {
-            wire__crate__api__observer__read_observed_chat_impl(port, ptr, rust_vec_len, data_len)
-        }
-        42 => wire__crate__api__take__recover_candidates_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__nodes__refresh_mostro_node_metadata_impl(
+        38 => wire__crate__api__serbero__on_serbero_updates_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__chat__open_chat_attachment_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__observer__paste_shared_key_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__disputes__pending_disputes_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__node_info__protocol_support_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
         44 => {
+            wire__crate__api__observer__read_observed_chat_impl(port, ptr, rust_vec_len, data_len)
+        }
+        45 => wire__crate__api__take__recover_candidates_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__nodes__refresh_mostro_node_metadata_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        47 => {
             wire__crate__api__nodes__rehydrate_active_node_impl(port, ptr, rust_vec_len, data_len)
         }
-        45 => wire__crate__api__nodes__remove_custom_mostro_node_impl(
+        48 => wire__crate__api__nodes__remove_custom_mostro_node_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        46 => wire__crate__api__relays__remove_relay_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__resolve__resolve_dispute_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__chat__retry_chat_message_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__nodes__select_active_node_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__chat__send_chat_attachment_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__chat__send_chat_message_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__settings__set_language_impl(port, ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__take__solver_permission_default_impl(
+        49 => wire__crate__api__relays__remove_relay_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__resolve__resolve_dispute_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__chat__retry_chat_message_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__nodes__select_active_node_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__chat__send_chat_attachment_impl(port, ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__chat__send_chat_message_impl(port, ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__serbero__serbero_mediation_impl(port, ptr, rust_vec_len, data_len),
+        56 => wire__crate__api__settings__set_language_impl(port, ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__serbero__set_serbero_pubkey_impl(port, ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__take__solver_permission_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        54 => wire__crate__api__solver__solver_pubkey_impl(port, ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__take__solver_standing_impl(port, ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__take__solver_status_default_impl(port, ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__nodes__sync_mostro_node_pictures_impl(
+        59 => wire__crate__api__solver__solver_pubkey_impl(port, ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__take__solver_standing_impl(port, ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__take__solver_status_default_impl(port, ptr, rust_vec_len, data_len),
+        62 => wire__crate__api__nodes__sync_mostro_node_pictures_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        58 => wire__crate__api__take__take_dispute_impl(port, ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__solver__unload_solver_key_impl(port, ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__take__take_dispute_impl(port, ptr, rust_vec_len, data_len),
+        64 => wire__crate__api__solver__unload_solver_key_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -4298,11 +4697,11 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        6 => wire__crate__api__nodes__active_node_impl(ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__app_version_impl(ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__solver__create_solver_account_impl(ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__order_info__is_order_id_impl(ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__solver__preview_npub_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__nodes__active_node_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__app_version_impl(ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__solver__create_solver_account_impl(ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__order_info__is_order_id_impl(ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__solver__preview_npub_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -4393,6 +4792,24 @@ impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<
 
 impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<RelayStatusStream>> for RelayStatusStream {
     fn into_into_dart(self) -> FrbWrapper<RelayStatusStream> {
+        self.into()
+    }
+}
+
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for FrbWrapper<SerberoUpdateStream> {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self.0)
+            .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for FrbWrapper<SerberoUpdateStream>
+{
+}
+
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<SerberoUpdateStream>> for SerberoUpdateStream {
+    fn into_into_dart(self) -> FrbWrapper<SerberoUpdateStream> {
         self.into()
     }
 }
@@ -5769,6 +6186,147 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::resolve::ResolvedAs>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::serbero::SerberoHeadline {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::HandedOff => 0.into_dart(),
+            Self::GuidanceSent => 1.into_dart(),
+            Self::Resolved => 2.into_dart(),
+            Self::Other => 3.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::serbero::SerberoHeadline
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::serbero::SerberoHeadline>
+    for crate::api::serbero::SerberoHeadline
+{
+    fn into_into_dart(self) -> crate::api::serbero::SerberoHeadline {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::serbero::SerberoLine {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.time.into_into_dart().into_dart(),
+            self.at.into_into_dart().into_dart(),
+            self.speaker.into_into_dart().into_dart(),
+            self.text.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::serbero::SerberoLine
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::serbero::SerberoLine>
+    for crate::api::serbero::SerberoLine
+{
+    fn into_into_dart(self) -> crate::api::serbero::SerberoLine {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::serbero::SerberoMediation {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.dispute_id.into_into_dart().into_dart(),
+            self.brief.into_into_dart().into_dart(),
+            self.transcript.into_into_dart().into_dart(),
+            self.transcript_parts.into_into_dart().into_dart(),
+            self.transcript_total.into_into_dart().into_dart(),
+            self.transcript_sent_at.into_into_dart().into_dart(),
+            self.updates.into_into_dart().into_dart(),
+            self.final_report.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::serbero::SerberoMediation
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::serbero::SerberoMediation>
+    for crate::api::serbero::SerberoMediation
+{
+    fn into_into_dart(self) -> crate::api::serbero::SerberoMediation {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::serbero::SerberoNote {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.subject.into_into_dart().into_dart(),
+            self.headline.into_into_dart().into_dart(),
+            self.detail.into_into_dart().into_dart(),
+            self.body.into_into_dart().into_dart(),
+            self.sent_at.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::serbero::SerberoNote
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::serbero::SerberoNote>
+    for crate::api::serbero::SerberoNote
+{
+    fn into_into_dart(self) -> crate::api::serbero::SerberoNote {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::serbero::SerberoSpeaker {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Buyer => 0.into_dart(),
+            Self::Seller => 1.into_dart(),
+            Self::SerberoToBuyer => 2.into_dart(),
+            Self::SerberoToSeller => 3.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::serbero::SerberoSpeaker
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::serbero::SerberoSpeaker>
+    for crate::api::serbero::SerberoSpeaker
+{
+    fn into_into_dart(self) -> crate::api::serbero::SerberoSpeaker {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::serbero::SerberoUpdateView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.sent_at.into_into_dart().into_dart(),
+            self.lines.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::serbero::SerberoUpdateView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::serbero::SerberoUpdateView>
+    for crate::api::serbero::SerberoUpdateView
+{
+    fn into_into_dart(self) -> crate::api::serbero::SerberoUpdateView {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::solver::SolverKeyError {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -6027,6 +6585,13 @@ impl SseEncode for RelayStatusStream {
     }
 }
 
+impl SseEncode for SerberoUpdateStream {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SerberoUpdateStream>>>::sse_encode(flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self), serializer);
+    }
+}
+
 impl SseEncode
     for RustOpaqueMoi<
         flutter_rust_bridge::for_generated::RustAutoOpaqueInner<AttachmentProgressStream>,
@@ -6077,6 +6642,17 @@ impl SseEncode
 
 impl SseEncode
     for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RelayStatusStream>>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        let (ptr, size) = self.sse_encode_raw();
+        <usize>::sse_encode(ptr, serializer);
+        <i32>::sse_encode(size, serializer);
+    }
+}
+
+impl SseEncode
+    for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SerberoUpdateStream>>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -6629,6 +7205,26 @@ impl SseEncode for Vec<crate::api::relays::RelayInfo> {
     }
 }
 
+impl SseEncode for Vec<crate::api::serbero::SerberoLine> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::serbero::SerberoLine>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::serbero::SerberoUpdateView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::serbero::SerberoUpdateView>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::take::TakenDisputeSummary> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7035,6 +7631,36 @@ impl SseEncode for Option<crate::api::resolve::ResolvedAs> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::api::resolve::ResolvedAs>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::serbero::SerberoMediation> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::serbero::SerberoMediation>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::serbero::SerberoNote> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::serbero::SerberoNote>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::serbero::SerberoSpeaker> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::serbero::SerberoSpeaker>::sse_encode(value, serializer);
         }
     }
 }
@@ -7454,6 +8080,85 @@ impl SseEncode for crate::api::resolve::ResolvedAs {
     }
 }
 
+impl SseEncode for crate::api::serbero::SerberoHeadline {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::serbero::SerberoHeadline::HandedOff => 0,
+                crate::api::serbero::SerberoHeadline::GuidanceSent => 1,
+                crate::api::serbero::SerberoHeadline::Resolved => 2,
+                crate::api::serbero::SerberoHeadline::Other => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::serbero::SerberoLine {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.time, serializer);
+        <Option<i64>>::sse_encode(self.at, serializer);
+        <Option<crate::api::serbero::SerberoSpeaker>>::sse_encode(self.speaker, serializer);
+        <String>::sse_encode(self.text, serializer);
+    }
+}
+
+impl SseEncode for crate::api::serbero::SerberoMediation {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.dispute_id, serializer);
+        <Option<crate::api::serbero::SerberoNote>>::sse_encode(self.brief, serializer);
+        <Vec<crate::api::serbero::SerberoLine>>::sse_encode(self.transcript, serializer);
+        <u32>::sse_encode(self.transcript_parts, serializer);
+        <u32>::sse_encode(self.transcript_total, serializer);
+        <Option<i64>>::sse_encode(self.transcript_sent_at, serializer);
+        <Vec<crate::api::serbero::SerberoUpdateView>>::sse_encode(self.updates, serializer);
+        <Option<crate::api::serbero::SerberoNote>>::sse_encode(self.final_report, serializer);
+    }
+}
+
+impl SseEncode for crate::api::serbero::SerberoNote {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.subject, serializer);
+        <crate::api::serbero::SerberoHeadline>::sse_encode(self.headline, serializer);
+        <String>::sse_encode(self.detail, serializer);
+        <String>::sse_encode(self.body, serializer);
+        <i64>::sse_encode(self.sent_at, serializer);
+    }
+}
+
+impl SseEncode for crate::api::serbero::SerberoSpeaker {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::serbero::SerberoSpeaker::Buyer => 0,
+                crate::api::serbero::SerberoSpeaker::Seller => 1,
+                crate::api::serbero::SerberoSpeaker::SerberoToBuyer => 2,
+                crate::api::serbero::SerberoSpeaker::SerberoToSeller => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::serbero::SerberoUpdateView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i64>::sse_encode(self.sent_at, serializer);
+        <Vec<crate::api::serbero::SerberoLine>>::sse_encode(self.lines, serializer);
+    }
+}
+
 impl SseEncode for crate::api::solver::SolverKeyError {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7632,6 +8337,7 @@ mod io {
     use crate::api::chat::*;
     use crate::api::disputes::*;
     use crate::api::relays::*;
+    use crate::api::serbero::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -7711,6 +8417,20 @@ mod io {
     ) {
         MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RelayStatusStream>>::decrement_strong_count(ptr as _);
     }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_bosstro_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SerberoUpdateStream>>::increment_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_bosstro_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SerberoUpdateStream>>::decrement_strong_count(ptr as _);
+    }
 }
 #[cfg(not(target_family = "wasm"))]
 pub use io::*;
@@ -7727,6 +8447,7 @@ mod web {
     use crate::api::chat::*;
     use crate::api::disputes::*;
     use crate::api::relays::*;
+    use crate::api::serbero::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -7807,6 +8528,20 @@ mod web {
         ptr: *const std::ffi::c_void,
     ) {
         MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RelayStatusStream>>::decrement_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SerberoUpdateStream>>::increment_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSerberoUpdateStream(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<SerberoUpdateStream>>::decrement_strong_count(ptr as _);
     }
 }
 #[cfg(target_family = "wasm")]

@@ -15,6 +15,8 @@ import 'package:bosstro/features/nodes/models/node_display.dart';
 import 'package:bosstro/features/disputes/widgets/pending_dispute_row.dart';
 import 'package:bosstro/features/observer/screens/observer_screen.dart';
 import 'package:bosstro/features/observer/services/observer_core.dart';
+import 'package:bosstro/features/serbero/screens/serbero_screen.dart';
+import 'package:bosstro/features/serbero/services/serbero_core.dart';
 import 'package:bosstro/features/orders/services/orders_core.dart';
 import 'package:bosstro/features/orders/widgets/order_summary_card.dart';
 import 'package:bosstro/features/resolution/screens/resolution_screen.dart';
@@ -100,6 +102,36 @@ FakeObserverCore _observer() =>
         ],
       );
 
+/// A handoff with every section, so each is measured.
+FakeSerberoCore _serbero() =>
+    FakeSerberoCore()
+      ..mediations[_a] = SerberoMediation(
+        disputeId: _a,
+        brief: serberoNote(
+          'handed off: self_resolution_stalled',
+          'Topic: payment_not_confirmed (0.91) · rounds: 2',
+          sentAt: _opened,
+        ),
+        transcript: [
+          serberoLine(SerberoSpeaker.buyer, 'Ya pagué', at: _opened - 86400),
+          serberoLine(SerberoSpeaker.serberoToSeller, '¿Lo recibiste?'),
+          serberoLine(null, 'text that reads as no message'),
+        ],
+        transcriptParts: 1,
+        transcriptTotal: 2,
+        updates: [
+          SerberoUpdateView(
+            sentAt: _opened + 600,
+            lines: [serberoLine(SerberoSpeaker.seller, 'Ya llegó')],
+          ),
+        ],
+        finalReport: serberoNote(
+          'resolved: cooperatively-canceled',
+          'outcome: released',
+          sentAt: _opened + 1200,
+        ),
+      );
+
 Future<void> _pump(
   WidgetTester tester,
   Locale locale,
@@ -123,6 +155,8 @@ Future<void> _pump(
         disputes: _disputes(bonds: bonds),
         chat: _chat(),
         observer: _observer(),
+        serbero: _serbero(),
+        settings: FakeSettingsCore(serbero: {mostroNodePubkey: 'npub1serbero'}),
         orders: orders,
         nodes: FakeNodesCore(active: mostroNodePubkey, info: sampleInfo()),
       ),
@@ -246,7 +280,7 @@ void main() {
         );
       });
 
-      testWidgets('the detail: Info, the chat, the parties\' chat', (
+      testWidgets('the detail: Info, the chat, the parties\' chat, Serbero', (
         tester,
       ) async {
         await _pump(tester, locale, AppRoute.disputeDetail(_a));
@@ -267,6 +301,13 @@ void main() {
         await _tap(tester, read);
         expect(find.byType(ObserverScreen), findsOneWidget);
         await _fitsToTheEnd(tester, 'Observer');
+
+        await _pump(tester, locale, AppRoute.disputeDetail(_a));
+        final mediation = find.text(l10n.serberoReadAction);
+        await _scrollInfoTo(tester, mediation);
+        await _tap(tester, mediation);
+        expect(find.byType(SerberoScreen), findsOneWidget);
+        await _fitsToTheEnd(tester, 'Serbero');
       });
 
       for (final bonds in [true, null]) {

@@ -7,7 +7,8 @@
 //! compares URLs without loading a picture), disputes by `node:dispute id` (a
 //! JSON document), chat messages by `node:dispute:party:solver:message id`
 //! (a JSON document), observed chat messages by `node:dispute:solver:message
-//! id` (a JSON document), attachment blobs by their SHA-256 (the encrypted bytes
+//! id` (a JSON document), Serbero's reports by `node:dispute:solver:event id`
+//! (a JSON document), attachment blobs by their SHA-256 (the encrypted bytes
 //! as a `Uint8Array`, with a JSON index entry for the trim, as MostroP2P/app).
 //! This backend has no compound writes: each method is one `put` or `delete` (a
 //! picture's or a blob's bytes and index in one transaction), so it needs
@@ -34,13 +35,15 @@ use crate::db::Storage;
 use crate::api::chat::ChatDelivery;
 use crate::api::disputes::DisputeStatus;
 use crate::chat::observer::{ObservedRecord, ObservedRef};
+use crate::serbero::{SerberoRecord, SerberoRef};
 use crate::chat::{ChannelRef, ChatRecord};
 use crate::disputes::DisputeRecord;
 
 /// Bumped when a store is added; `open_db` creates whatever is missing.
 /// 2: disputes (phase 3). 3: dispute_messages (phase 5). 4: the attachment
-/// cache (phase 5, part 2). 5: observed_messages (phase 5c).
-const DB_VERSION: u32 = 5;
+/// cache (phase 5, part 2). 5: observed_messages (phase 5c). 6:
+/// serbero_messages (Serbero's reports).
+const DB_VERSION: u32 = 6;
 const SETTINGS_STORE: &str = "settings";
 const RELAYS_STORE: &str = "relays";
 const NODE_PICTURES_STORE: &str = "node_pictures";
@@ -50,7 +53,8 @@ const CHAT_STORE: &str = "dispute_messages";
 const ATTACHMENT_BLOBS_STORE: &str = "attachment_blobs";
 const ATTACHMENT_INDEX_STORE: &str = "attachment_blob_index";
 const OBSERVED_STORE: &str = "observed_messages";
-const ALL_STORES: [&str; 9] = [
+const SERBERO_STORE: &str = "serbero_messages";
+const ALL_STORES: [&str; 10] = [
     SETTINGS_STORE,
     RELAYS_STORE,
     NODE_PICTURES_STORE,
@@ -60,6 +64,7 @@ const ALL_STORES: [&str; 9] = [
     ATTACHMENT_BLOBS_STORE,
     ATTACHMENT_INDEX_STORE,
     OBSERVED_STORE,
+    SERBERO_STORE,
 ];
 
 /// The key of a dispute's record: one per node and dispute (D6).
@@ -91,6 +96,15 @@ fn observed_prefix(observed: &ObservedRef) -> String {
     format!(
         "{}:{}:{}",
         observed.mostro_pubkey, observed.dispute_id, observed.solver_pubkey
+    )
+}
+
+/// The key prefix of one dispute's Serbero reports to one solver key: the
+/// range `prefix:` ..< `prefix;`.
+fn serbero_prefix(reports: &SerberoRef) -> String {
+    format!(
+        "{}:{}:{}",
+        reports.mostro_pubkey, reports.dispute_id, reports.solver_pubkey
     )
 }
 
@@ -508,6 +522,49 @@ impl Storage for IndexedDbStorage {
             .collect())
     }
 
+    // ── Serbero's reports ────────────────────────────────────────────────────
+
+    async fn insert_serbero_message(&self, message: &SerberoRecord) -> Result<bool> {
+        let key = format!(
+            "{}:{}",
+            serbero_prefix(&message.conversation),
+            message.event_id
+        );
+        if self.get_string(SERBERO_STORE, &key).await?.is_some() {
+            return Ok(false);
+        }
+        let json = serde_json::to_string(message)?;
+        self.put_string(SERBERO_STORE, &key, &json).await?;
+        Ok(true)
+    }
+
+    async fn list_serbero_messages(&self, reports: &SerberoRef) -> Result<Vec<SerberoRecord>> {
+        let prefix = serbero_prefix(reports);
+        let range = web_sys::IdbKeyRange::bound(
+            &JsValue::from_str(&format!("{prefix}:")),
+            &JsValue::from_str(&format!("{prefix};")),
+        )
+        .map_err(|e| js_err("key range", e))?;
+        let db = self.open_db().await?;
+        let tx = db
+            .transaction_on_one_with_mode(SERBERO_STORE, IdbTransactionMode::Readonly)
+            .map_err(|e| js_err("tx open", e))?;
+        let store = tx
+            .object_store(SERBERO_STORE)
+            .map_err(|e| js_err("store open", e))?;
+        let array = store
+            .get_all_with_key(&range)
+            .map_err(|e| js_err("get_all", e))?
+            .await
+            .map_err(|e| js_err("get_all await", e))?;
+        Ok(array
+            .iter()
+            .filter_map(|v| v.as_string())
+            .filter_map(|json| serde_json::from_str::<SerberoRecord>(&json).ok())
+            .filter(|row| &row.conversation == reports)
+            .collect())
+    }
+
     // ── Attachment cache — encrypted blobs only, with their index entry ─────
 
     async fn save_attachment_blob(&self, sha256: &str, blob: &[u8]) -> Result<()> {
@@ -667,6 +724,16 @@ mod tests {
     #[wasm_bindgen_test]
     async fn observed_messages_round_trip() {
         contract::observed_messages_round_trip(&store("observed").await).await;
+    }
+
+    #[wasm_bindgen_test]
+    async fn serbero_messages_round_trip() {
+        contract::serbero_messages_round_trip(&store("serbero").await).await;
+    }
+
+    #[wasm_bindgen_test]
+    async fn serbero_reports_never_mix() {
+        contract::serbero_reports_never_mix(&store("serbero_mix").await).await;
     }
 
     #[wasm_bindgen_test]

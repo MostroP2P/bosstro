@@ -129,6 +129,8 @@ pub async fn initialize_relays() -> Result<()> {
         // The chats of the disputes this key holds (phase 5).
         crate::chat::router::start(pool.client(), feed).await;
     }
+    // Serbero's reports to the solver key, from the Serbero trusted there.
+    crate::serbero::router::start(pool.client()).await;
 
     // Each time the pool comes online, the active node's relay list and
     // instance info are read again. Subscribed before the state is read, so

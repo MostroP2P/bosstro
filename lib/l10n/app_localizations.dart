@@ -3401,6 +3401,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Asked at {time}'**
   String orderAskedAt(String time);
+
+  /// Settings row: the Serbero pubkey trusted on the active node; opens a dialog to set it
+  ///
+  /// In en, this message translates to:
+  /// **'Serbero'**
+  String get settingsSerbero;
+
+  /// Value of the Serbero row when no Serbero pubkey is set
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get settingsSerberoNone;
+
+  /// Title of the dialog that sets the trusted Serbero pubkey
+  ///
+  /// In en, this message translates to:
+  /// **'Trust Serbero'**
+  String get serberoDialogTitle;
+
+  /// Body of the Serbero pubkey dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the public key (npub or hex) of the Serbero that mediates on this node. Bosstro reads mediation reports only from this key.'**
+  String get serberoDialogBody;
+
+  /// Label of the Serbero pubkey field
+  ///
+  /// In en, this message translates to:
+  /// **'Serbero\'s public key'**
+  String get serberoPubkeyLabel;
+
+  /// Primary action of the Serbero pubkey dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get serberoSave;
+
+  /// Secondary action of the Serbero pubkey dialog: forget the trusted key
+  ///
+  /// In en, this message translates to:
+  /// **'Stop trusting'**
+  String get serberoRemove;
+
+  /// Error under the field when the pasted key is the node's own key
+  ///
+  /// In en, this message translates to:
+  /// **'That is the node\'s own key, not Serbero\'s.'**
+  String get serberoErrorIsNode;
+
+  /// Title of the Info pane card and the screen with Serbero's mediation of the dispute
+  ///
+  /// In en, this message translates to:
+  /// **'Serbero\'s mediation'**
+  String get serberoCardTitle;
+
+  /// Card line when no Serbero key is trusted on the node
+  ///
+  /// In en, this message translates to:
+  /// **'Set Serbero\'s key in Settings to read its mediation reports.'**
+  String get serberoCardNotTrusted;
+
+  /// Card line and empty-screen body when Serbero sent nothing about this dispute
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing from Serbero about this dispute. Its report arrives when Serbero hands the dispute off, if your key is one of its solvers.'**
+  String get serberoCardEmpty;
+
+  /// Card line: when Serbero's last report arrived
+  ///
+  /// In en, this message translates to:
+  /// **'Last report {time}'**
+  String serberoCardReceived(String time);
+
+  /// Card action: opens Serbero's mediation
+  ///
+  /// In en, this message translates to:
+  /// **'Read Serbero\'s mediation'**
+  String get serberoReadAction;
+
+  /// Section title: Serbero's summary at handoff
+  ///
+  /// In en, this message translates to:
+  /// **'Brief'**
+  String get serberoBriefTitle;
+
+  /// Section title: the conversation Serbero had with the parties
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation'**
+  String get serberoTranscriptTitle;
+
+  /// Under the conversation title when parts are missing
+  ///
+  /// In en, this message translates to:
+  /// **'{arrived} of {total} parts received'**
+  String serberoTranscriptParts(int arrived, int total);
+
+  /// Section title: party messages after the handoff
+  ///
+  /// In en, this message translates to:
+  /// **'After the handoff'**
+  String get serberoUpdatesTitle;
+
+  /// Section title: Serbero's final report
+  ///
+  /// In en, this message translates to:
+  /// **'Final report'**
+  String get serberoFinalTitle;
+
+  /// Sender label of a message Serbero wrote to the buyer
+  ///
+  /// In en, this message translates to:
+  /// **'Serbero → buyer'**
+  String get serberoSenderToBuyer;
+
+  /// Sender label of a message Serbero wrote to the seller
+  ///
+  /// In en, this message translates to:
+  /// **'Serbero → seller'**
+  String get serberoSenderToSeller;
+
+  /// Empty-screen title when Serbero sent nothing about this dispute
+  ///
+  /// In en, this message translates to:
+  /// **'No mediation yet'**
+  String get serberoEmptyTitle;
+
+  /// Brief headline: Serbero handed the dispute off; reason is one of the serberoReason* strings
+  ///
+  /// In en, this message translates to:
+  /// **'Handed off: {reason}'**
+  String serberoHandedOff(String reason);
+
+  /// Brief headline: Serbero guided the parties; path is one of the serberoPath* strings
+  ///
+  /// In en, this message translates to:
+  /// **'Guidance sent: {path}'**
+  String serberoGuidanceSent(String path);
+
+  /// Final report headline; status is the dispute status in words
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved: {status}'**
+  String serberoResolved(String status);
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'the parties did not settle it themselves in time'**
+  String get serberoReasonSelfResolutionStalled;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'the facts are gathered'**
+  String get serberoReasonFactsGathered;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'the parties\' accounts contradict each other'**
+  String get serberoReasonConflictingClaims;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'signs of fraud'**
+  String get serberoReasonFraudSignal;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'a party asked for a person'**
+  String get serberoReasonHumanRequested;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'outside what Serbero mediates'**
+  String get serberoReasonOutsideScope;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'a party stopped answering'**
+  String get serberoReasonUnresponsive;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'too many rounds of questions'**
+  String get serberoReasonRoundLimit;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'a fact stayed unclear'**
+  String get serberoReasonUncertain;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'the automatic reading failed'**
+  String get serberoReasonJudgeUnavailable;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'a party sent too many messages'**
+  String get serberoReasonFlood;
+
+  /// Why Serbero handed a dispute off (Serbero's handoff reason), shown after the colon of serberoHandedOff
+  ///
+  /// In en, this message translates to:
+  /// **'the mediation could not start'**
+  String get serberoReasonOpeningFailed;
+
+  /// What Serbero guided the parties to do, shown after the colon of serberoGuidanceSent
+  ///
+  /// In en, this message translates to:
+  /// **'the payment arrived'**
+  String get serberoPathPaymentArrived;
+
+  /// What Serbero guided the parties to do, shown after the colon of serberoGuidanceSent
+  ///
+  /// In en, this message translates to:
+  /// **'the payment was not sent'**
+  String get serberoPathPaymentNotSent;
 }
 
 class _AppLocalizationsDelegate

@@ -1948,4 +1948,134 @@ class AppLocalizationsFr extends AppLocalizations {
   String orderAskedAt(String time) {
     return 'Consulté à $time';
   }
+
+  @override
+  String get settingsSerbero => 'Serbero';
+
+  @override
+  String get settingsSerberoNone => 'Non défini';
+
+  @override
+  String get serberoDialogTitle => 'Faire confiance à Serbero';
+
+  @override
+  String get serberoDialogBody =>
+      'Collez la clé publique (npub ou hex) du Serbero qui assure la médiation sur ce nœud. Bosstro ne lit les rapports de médiation que de cette clé.';
+
+  @override
+  String get serberoPubkeyLabel => 'Clé publique de Serbero';
+
+  @override
+  String get serberoSave => 'Enregistrer';
+
+  @override
+  String get serberoRemove => 'Ne plus faire confiance';
+
+  @override
+  String get serberoErrorIsNode =>
+      'C\'est la clé du nœud lui-même, pas celle de Serbero.';
+
+  @override
+  String get serberoCardTitle => 'Médiation de Serbero';
+
+  @override
+  String get serberoCardNotTrusted =>
+      'Définissez la clé de Serbero dans les Réglages pour lire ses rapports de médiation.';
+
+  @override
+  String get serberoCardEmpty =>
+      'Serbero n\'a rien envoyé sur ce litige. Son rapport arrive quand Serbero transmet le litige, si votre clé fait partie de ses solvers.';
+
+  @override
+  String serberoCardReceived(String time) {
+    return 'Dernier rapport $time';
+  }
+
+  @override
+  String get serberoReadAction => 'Lire la médiation de Serbero';
+
+  @override
+  String get serberoBriefTitle => 'Résumé';
+
+  @override
+  String get serberoTranscriptTitle => 'Conversation';
+
+  @override
+  String serberoTranscriptParts(int arrived, int total) {
+    return '$arrived sur $total parties reçues';
+  }
+
+  @override
+  String get serberoUpdatesTitle => 'Après la transmission';
+
+  @override
+  String get serberoFinalTitle => 'Rapport final';
+
+  @override
+  String get serberoSenderToBuyer => 'Serbero → acheteur';
+
+  @override
+  String get serberoSenderToSeller => 'Serbero → vendeur';
+
+  @override
+  String get serberoEmptyTitle => 'Pas encore de médiation';
+
+  @override
+  String serberoHandedOff(String reason) {
+    return 'Transmis : $reason';
+  }
+
+  @override
+  String serberoGuidanceSent(String path) {
+    return 'Orientation envoyée : $path';
+  }
+
+  @override
+  String serberoResolved(String status) {
+    return 'Résolu : $status';
+  }
+
+  @override
+  String get serberoReasonSelfResolutionStalled =>
+      'les parties ne l\'ont pas réglé elles-mêmes à temps';
+
+  @override
+  String get serberoReasonFactsGathered => 'les faits sont réunis';
+
+  @override
+  String get serberoReasonConflictingClaims =>
+      'les versions des parties se contredisent';
+
+  @override
+  String get serberoReasonFraudSignal => 'signes de fraude';
+
+  @override
+  String get serberoReasonHumanRequested => 'une partie a demandé une personne';
+
+  @override
+  String get serberoReasonOutsideScope => 'hors de ce que Serbero arbitre';
+
+  @override
+  String get serberoReasonUnresponsive => 'une partie a cessé de répondre';
+
+  @override
+  String get serberoReasonRoundLimit => 'trop de séries de questions';
+
+  @override
+  String get serberoReasonUncertain => 'un fait est resté flou';
+
+  @override
+  String get serberoReasonJudgeUnavailable => 'la lecture automatique a échoué';
+
+  @override
+  String get serberoReasonFlood => 'une partie a envoyé trop de messages';
+
+  @override
+  String get serberoReasonOpeningFailed => 'la médiation n\'a pas pu démarrer';
+
+  @override
+  String get serberoPathPaymentArrived => 'le paiement est arrivé';
+
+  @override
+  String get serberoPathPaymentNotSent => 'le paiement n\'a pas été envoyé';
 }

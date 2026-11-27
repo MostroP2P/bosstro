@@ -34,7 +34,7 @@ ARB files (`lib/l10n/app_en.arb` is the source).
 | D10 | No mnemonic derivation for the solver key, so no derivation path. In Mostrix the only mnemonic-derived key is the trader identity, which must not be reused as the solver key. |
 | D11 | Brand from `app`: the Mostro mascot and logo. The launcher icon is Bosstro's own emblem (`icons/bosstro.png`, the mascot as a judge), so the two apps cannot be confused on one phone. |
 | D12 | Solver permissions are *Read* (take and chat) or *Read-Write* (also settle / cancel, and take over an `in-progress` dispute held by a Read solver). Bosstro learns the permission from the daemon's answers and caches it per node. |
-| D13 | Serbero (the assistant Read solver) is supported: its `send-dm` messages and handoffs are read only from trusted senders. |
+| D13 | Serbero (the assistant Read solver) is supported: its `send-dm` messages and handoffs are read only from trusted senders — one Serbero pubkey per node, set in Settings. |
 | A1 | License AGPL-3.0-or-later (code is copied from `app`, which is AGPL). |
 | A2 | **Android is the target** the app is built for. **Linux and web** also build and run, for development and convenience, without the Android-only key protections: no screenshot blocking, no nsec copy (`PlatformCapabilities`), no QR scanning, and on the web the key sits in browser storage, much weaker than the Keystore. iOS can come later. |
 | A3 | l10n: `en`, `es`, `it`, `fr`, `de`, `nl` and `pt` (Brazil), as `app`; English is the source. The app follows the system's language until the solver picks one in Settings (kept in Rust). |
@@ -65,6 +65,7 @@ rust/src/chat/       # the dispute chat: channel keys (in memory), the router, s
 rust/src/db/         # Storage: SQLite (native) and IndexedDB (web), one trait
 rust/src/disputes/   # kind 38386: parsing, merge (NIP-01 order), the active node's feed
 rust/src/mostro/     # the daemon's answers to the solver key, AdminTakeDispute, AdminSettle / AdminCancel, AdminOrderInfo, solver standing
+rust/src/serbero/    # Serbero's reports to the solver key: the trust boundary (intake), its text contract (parse), the live subscription and storage (router), the dispute's mediation (view)
 rust/src/nostr/      # the relay pool, live subscriptions, liveness probe, event readers, transport v2
 rust/migrations/     # sqlx migrations; never edit one that shipped, add a new file
 rust_builder/        # cargokit glue, copied from app
@@ -152,6 +153,31 @@ Three tabs, branches of one shell (`lib/core/app_routes.dart`), each keeping its
   week before the dispute opened is "the key opens no message of this dispute" either way.
 - **Files on the web:** decrypting and re-encoding (up to 25 MiB) run on the page's only
   thread, which stops meanwhile, as the take's PoW.
+- **Serbero's reports are stored in plain text** (`serbero_messages`), as the chats (A4): the
+  brief quotes the parties and the transcript is all they told Serbero.
+- **Serbero's reports exist only where Serbero sent them:** at its own handoff or guidance, to
+  the keys in its `[[solvers]]`. A dispute taken over before the handoff (session `superseded`)
+  has none (MostroP2P/serbero#82, a Serbero change).
+- **The backlog is the last month, fetched again on every start and reconnect** (no cursor yet):
+  Serbero's notices to the key (`new`, `taken`, `mediating`, `unattended` every 15 min per
+  untaken dispute) are fetched, opened and dropped each time, and a relay that caps the results
+  of a request returns the newest, so the effective backlog is "the last N events", which can
+  lose the oldest handoffs. A cursor per node, key and trusted Serbero, as the chat's, is the fix.
+- **A transcript line is dated from its `hh:mm` and the message that carried it**, at most one
+  day back: a session longer than 24 h would date its early lines wrong. Serbero's timers make it
+  unlikely.
+- **A transcript's parts are one transcript when sent within two minutes** (`PARTS_WINDOW_SECS`),
+  which also keeps a guidance transcript apart from a handoff one. A long transcript sent through
+  a slow relay can spread wider, and the screen then says some parts are missing although all
+  arrived.
+- **A party's line breaks are indented when the report is read**, whatever character made them
+  (`parse.rs`, U+2028, U+2029, `\v`, `\f`, U+0085, a lone `\r`), so none shows a line that reads
+  as Serbero's. A party message long enough to be split between two parts can still start the
+  next part with a line of its own; Serbero cuts party messages to `max_message_chars` (2000 by
+  default), far below a part, so only a raised setting (about 10k) allows it.
+- **`mediation could not start` is not shown:** Serbero sends it when it took a dispute it could
+  not mediate, asking a solver to take it over; Bosstro keeps only the brief, the transcript,
+  the updates and the final report.
 - The key-handling limits are listed under "Key handling" (2 and 8).
 
 ### Generated code
@@ -362,7 +388,13 @@ python3 tool/launcher_icon/build_sources.py && dart run flutter_launcher_icons  
   solver (38386 `cooperatively-canceled` / `released` in mostrod 0.20); taken disputes are
   reconciled from 38386, and a late request answered `CooperativeCancelAccepted` reads closed.
 - **Serbero:** kind 14 `send-dm` messages to the solver key, read only from trusted senders, never
-  treated as protocol actions.
+  treated as protocol actions (`rust/src/serbero/`). Taken only from the Serbero pubkey trusted
+  on the active node, as a `Message::Dm` with action `send-dm`, a text payload and a first line
+  `Dispute <id> · <subject>` naming the message id's dispute (Serbero's `docs/messages.md` §3).
+  Serbero's chat with the parties is keyed with its own key, so only what it sends the solver
+  at handoff can be shown: the brief, the transcript (parts reassembled), updates and the final
+  report, kept in `serbero_messages`. A solver whose key is not in that Serbero's `[[solvers]]`
+  gets nothing.
 
 ## Style
 
@@ -392,8 +424,8 @@ One PR per phase; long phases split into phased PRs. Conventional commits, branc
 
 Phases: 0 scaffold · 1 solver key · 2 nodes and relays · 3 pending disputes · 4 take dispute ·
 5 dispute detail and chat · 5c observer · 6 resolution · 7 manual verification on a device ·
-8 release (`docs/RELEASING.md`). After the MVP: order lookup (issue #51). Serbero and notifications
-are post-MVP.
+8 release (`docs/RELEASING.md`). After the MVP: order lookup (issue #51), Serbero's mediation
+(issue #62). Notifications are post-MVP.
 
 A PR's title is its line in the release notes and `CHANGELOG.md` (`tool/release_notes.dart`
 groups by its conventional-commit type): write it for the solver who reads the release.

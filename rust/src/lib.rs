@@ -22,4 +22,5 @@ mod node_pictures;
 mod nostr;
 mod push;
 mod rt;
+mod serbero;
 mod solver_slot;
