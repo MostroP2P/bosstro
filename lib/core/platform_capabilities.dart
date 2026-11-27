@@ -26,6 +26,10 @@ abstract final class PlatformCapabilities {
   /// Firebase Cloud Messaging set up for this app, the notification channel
   /// (`MainActivity.kt`) and the texts Android shows (`strings.xml`). Where
   /// this is false nothing loads Firebase, and nothing offers notifications.
+  ///
+  /// True says the build can, not that the device can: Firebase needs Google
+  /// Play Services, which this does not look for. A phone without them never
+  /// gets a token, and whoever offers notifications has to handle that.
   static bool canPushOn(bool isWeb, TargetPlatform platform) =>
       !isWeb && platform == TargetPlatform.android;
 
