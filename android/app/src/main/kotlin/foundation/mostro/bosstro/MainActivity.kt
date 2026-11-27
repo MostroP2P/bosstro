@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.os.PersistableBundle
@@ -26,9 +27,10 @@ import io.flutter.plugin.common.MethodChannel
  * - `clearSensitive`: clears the clipboard if it still holds what
  *   `copySensitive` put there, and nothing else.
  *
- * It also creates the notification channel of the new-dispute push, which
- * Android shows by itself: no Dart runs when one arrives, so Dart cannot be
- * what creates it.
+ * It also creates the notification channel of the new-dispute push. With the
+ * app in the background or not running, Android shows that push by itself:
+ * no Dart runs then, so Dart cannot be what creates the channel. With the app
+ * in the foreground Firebase shows nothing and hands the push to the app.
  */
 class MainActivity : FlutterActivity() {
     /** What `copySensitive` last copied, until it is cleared or replaced. */
@@ -42,6 +44,15 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        createDisputesChannel()
+    }
+
+    /**
+     * The manifest keeps the activity through a change of the system's
+     * language (`configChanges`), so `onCreate` does not run again for it.
+     */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
         createDisputesChannel()
     }
 
@@ -80,9 +91,11 @@ class MainActivity : FlutterActivity() {
 
     /**
      * The channel the push server names in a new-dispute push. Created every
-     * time the app starts: it costs nothing when it exists, and it is how the
-     * name follows a change of the system's language. Its importance is only
-     * a first value, which the solver then owns in Android's settings.
+     * time the app starts and the configuration changes: it costs nothing
+     * when it exists, and creating it again is what renames it after a change
+     * of the system's language. A change made while the app is not running
+     * shows at its next start. Its importance is only a first value, which
+     * the solver then owns in Android's settings.
      *
      * The id is permanent: Android keeps the solver's settings by it, and the
      * push server sends it.
