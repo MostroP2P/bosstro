@@ -3521,6 +3521,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'They need Google Play Services and an internet connection. Check both and try again.'**
   String get notificationsUnavailableBody;
+
+  /// Dialog shown once, after the solver picks a node for the first time: the question
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notifications of new disputes?'**
+  String get pushOfferTitle;
+
+  /// Dialog body: what the notification does and what turning it on shares with whom
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone can ring when a dispute is opened on your node, even with Bosstro closed. Google delivers the notification, and the notification server sees your IP address and which node you follow. You can change this in Settings.'**
+  String get pushOfferBody;
+
+  /// Dialog answer: turn notifications on (asks the OS for permission next)
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notifications'**
+  String get pushOfferAccept;
+
+  /// Dialog answer: leave notifications off; nothing is asked again
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get pushOfferDecline;
 }
 
 class _AppLocalizationsDelegate

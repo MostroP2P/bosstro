@@ -2018,4 +2018,18 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get notificationsUnavailableBody =>
       'Necesitan los servicios de Google Play y conexión a internet. Comprueba ambos e inténtalo de nuevo.';
+
+  @override
+  String get pushOfferTitle =>
+      '¿Activar las notificaciones de nuevas disputas?';
+
+  @override
+  String get pushOfferBody =>
+      'Tu teléfono puede sonar cuando se abre una disputa en tu nodo, incluso con Bosstro cerrado. Google entrega la notificación, y el servidor de notificaciones ve tu dirección IP y qué nodo sigues. Puedes cambiarlo en Configuración.';
+
+  @override
+  String get pushOfferAccept => 'Activar notificaciones';
+
+  @override
+  String get pushOfferDecline => 'Ahora no';
 }

@@ -568,5 +568,9 @@
   "notificationsBlockedTitle": "Meldingen zijn geblokkeerd",
   "notificationsBlockedBody": "Sta meldingen van Bosstro toe in de instellingen van je telefoon en zet ze hier weer aan.",
   "notificationsUnavailableTitle": "Meldingen zijn niet beschikbaar",
-  "notificationsUnavailableBody": "Ze hebben Google Play-services en een internetverbinding nodig. Controleer beide en probeer het opnieuw."
+  "notificationsUnavailableBody": "Ze hebben Google Play-services en een internetverbinding nodig. Controleer beide en probeer het opnieuw.",
+  "pushOfferTitle": "Meldingen van nieuwe disputen aanzetten?",
+  "pushOfferBody": "Je telefoon kan afgaan wanneer er een dispuut wordt geopend op je node, ook als Bosstro gesloten is. Google bezorgt de melding, en de meldingsserver ziet je IP-adres en welke node je volgt. Je kunt dit wijzigen in Instellingen.",
+  "pushOfferAccept": "Meldingen aanzetten",
+  "pushOfferDecline": "Niet nu"
 }

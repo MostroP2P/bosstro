@@ -52,6 +52,9 @@ class FakePushCore implements PushCore {
 
   final PushCalls calls;
   bool isEnabled;
+
+  /// Whether the offer was already made.
+  bool offered = false;
   PushWatchStatus registered = PushWatchStatus.registered;
 
   PushWatchStatus get _status => isEnabled ? registered : PushWatchStatus.off;
@@ -73,6 +76,14 @@ class FakePushCore implements PushCore {
   Future<PushWatchStatus> setToken(String? token) async {
     calls.log.add('core.setToken($token)');
     return _status;
+  }
+
+  @override
+  Future<bool> takeOffer() async {
+    calls.log.add('core.takeOffer');
+    if (offered) return false;
+    offered = true;
+    return !isEnabled;
   }
 
   @override

@@ -116,6 +116,9 @@ struct Stored {
     watch: Option<Watch>,
     #[serde(default)]
     unwatch: Vec<PendingUnwatch>,
+    /// The solver was asked once whether they want notifications.
+    #[serde(default)]
+    offered: bool,
 }
 
 /// Where the watch stands. Markers: Dart maps them to its own copy.
@@ -209,6 +212,20 @@ impl Watcher {
     pub(crate) async fn enabled(&self, db: Option<&impl Storage>) -> bool {
         let mut inner = self.inner.lock().await;
         stored(&mut inner, db).await.enabled
+    }
+
+    /// Whether to offer notifications to the solver now, which is said yes
+    /// to once: they are off and were never offered. The offer is marked as
+    /// made here, before it shows, so it cannot show twice.
+    pub(crate) async fn take_offer(&self, db: Option<&impl Storage>) -> bool {
+        let mut inner = self.inner.lock().await;
+        let stored = stored(&mut inner, db).await;
+        if stored.offered {
+            return false;
+        }
+        stored.offered = true;
+        save(db, stored).await;
+        !stored.enabled
     }
 
     /// Turn notifications on or off. The server learns of it at the next
@@ -1191,6 +1208,25 @@ mod tests {
             .unwrap();
 
         assert!(!Watcher::new(None).enabled(Some(&db)).await);
+    }
+
+    #[tokio::test]
+    async fn notifications_are_offered_once_and_not_to_who_has_them_on() {
+        let db = store().await;
+        let watcher = Watcher::new(None);
+        assert!(watcher.take_offer(Some(&db)).await);
+        assert!(!watcher.take_offer(Some(&db)).await);
+        // Not after a restart either.
+        assert!(!Watcher::new(None).take_offer(Some(&db)).await);
+
+        // Already on (turned on in Settings before any offer): nothing to
+        // offer, now or later.
+        let db = store().await;
+        let watcher = Watcher::new(None);
+        watcher.set_enabled(Some(&db), true).await;
+        assert!(!watcher.take_offer(Some(&db)).await);
+        watcher.set_enabled(Some(&db), false).await;
+        assert!(!watcher.take_offer(Some(&db)).await);
     }
 
     #[tokio::test]

@@ -2038,4 +2038,18 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get notificationsUnavailableBody =>
       'Sie brauchen die Google Play-Dienste und eine Internetverbindung. Prüfe beides und versuche es erneut.';
+
+  @override
+  String get pushOfferTitle =>
+      'Benachrichtigungen für neue Streitfälle einschalten?';
+
+  @override
+  String get pushOfferBody =>
+      'Dein Telefon kann klingeln, wenn auf deinem Node ein Streitfall eröffnet wird, auch wenn Bosstro geschlossen ist. Google stellt die Benachrichtigung zu, und der Benachrichtigungsserver sieht deine IP-Adresse und welchem Node du folgst. Du kannst das in den Einstellungen ändern.';
+
+  @override
+  String get pushOfferAccept => 'Benachrichtigungen einschalten';
+
+  @override
+  String get pushOfferDecline => 'Nicht jetzt';
 }

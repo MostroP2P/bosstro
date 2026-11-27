@@ -12,6 +12,12 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 /// Whether the solver turned notifications on. Off until they do.
 Future<bool> pushEnabled() => RustLib.instance.api.crateApiPushPushEnabled();
 
+/// Whether to offer the solver notifications now. Yes at most once in the
+/// life of the install, and never when they are already on: asking marks the
+/// offer as made.
+Future<bool> takePushOffer() =>
+    RustLib.instance.api.crateApiPushTakePushOffer();
+
 /// Turn the notifications of new disputes on or off, and bring the push
 /// server in step: turning them off drops the watch. Dart deletes the
 /// device's token itself and says so with [`set_push_token`].

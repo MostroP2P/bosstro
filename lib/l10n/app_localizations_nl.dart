@@ -2025,4 +2025,17 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get notificationsUnavailableBody =>
       'Ze hebben Google Play-services en een internetverbinding nodig. Controleer beide en probeer het opnieuw.';
+
+  @override
+  String get pushOfferTitle => 'Meldingen van nieuwe disputen aanzetten?';
+
+  @override
+  String get pushOfferBody =>
+      'Je telefoon kan afgaan wanneer er een dispuut wordt geopend op je node, ook als Bosstro gesloten is. Google bezorgt de melding, en de meldingsserver ziet je IP-adres en welke node je volgt. Je kunt dit wijzigen in Instellingen.';
+
+  @override
+  String get pushOfferAccept => 'Meldingen aanzetten';
+
+  @override
+  String get pushOfferDecline => 'Niet nu';
 }

@@ -2020,4 +2020,18 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get notificationsUnavailableBody =>
       'Elles nécessitent les services Google Play et une connexion à internet. Vérifiez les deux et réessayez.';
+
+  @override
+  String get pushOfferTitle =>
+      'Activer les notifications des nouveaux litiges ?';
+
+  @override
+  String get pushOfferBody =>
+      'Votre téléphone peut sonner quand un litige est ouvert sur votre nœud, même si Bosstro est fermé. Google achemine la notification, et le serveur de notifications voit votre adresse IP et le nœud que vous suivez. Vous pouvez changer cela dans Paramètres.';
+
+  @override
+  String get pushOfferAccept => 'Activer les notifications';
+
+  @override
+  String get pushOfferDecline => 'Pas maintenant';
 }

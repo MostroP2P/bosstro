@@ -568,5 +568,9 @@
   "notificationsBlockedTitle": "Les notifications sont bloquées",
   "notificationsBlockedBody": "Autorisez les notifications de Bosstro dans les réglages de votre téléphone, puis réactivez-les ici.",
   "notificationsUnavailableTitle": "Les notifications ne sont pas disponibles",
-  "notificationsUnavailableBody": "Elles nécessitent les services Google Play et une connexion à internet. Vérifiez les deux et réessayez."
+  "notificationsUnavailableBody": "Elles nécessitent les services Google Play et une connexion à internet. Vérifiez les deux et réessayez.",
+  "pushOfferTitle": "Activer les notifications des nouveaux litiges ?",
+  "pushOfferBody": "Votre téléphone peut sonner quand un litige est ouvert sur votre nœud, même si Bosstro est fermé. Google achemine la notification, et le serveur de notifications voit votre adresse IP et le nœud que vous suivez. Vous pouvez changer cela dans Paramètres.",
+  "pushOfferAccept": "Activer les notifications",
+  "pushOfferDecline": "Pas maintenant"
 }

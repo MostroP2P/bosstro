@@ -469,6 +469,27 @@ void main() {
             'Notifications, ${status?.name ?? 'off'}',
           );
         }
+        // The offer after the first node of an install.
+        await tester.pumpWidget(const SizedBox.shrink());
+        setSurface(tester);
+        await pumpApp(
+          tester,
+          location: AppRoute.chooseNode,
+          locale: locale,
+          overrides: fakeCoreOverrides(nodes: FakeNodesCore()),
+        );
+        await tester.scrollUntilVisible(
+          find.text('Mostro Cuba'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await _tap(tester, find.text('Mostro Cuba'));
+        expect(find.byType(MostroDialog), findsOneWidget);
+        await _fitsToTheEnd(
+          tester,
+          'Notifications offer',
+          within: find.byType(MostroDialog),
+        );
         // The two refusals of turning it on.
         for (final arrange in <void Function(FakePushMessaging)>[
           (messaging) => messaging.permission = false,

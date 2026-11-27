@@ -8,6 +8,7 @@ import 'package:bosstro/core/app_routes.dart';
 import 'package:bosstro/core/app_theme.dart';
 import 'package:bosstro/features/nodes/models/node_display.dart';
 import 'package:bosstro/features/nodes/providers/node_providers.dart';
+import 'package:bosstro/features/notifications/widgets/push_dialogs.dart';
 import 'package:bosstro/features/nodes/services/nodes_core.dart';
 import 'package:bosstro/features/nodes/widgets/add_node_dialog.dart';
 import 'package:bosstro/features/nodes/widgets/node_card.dart';
@@ -66,9 +67,16 @@ class _ChooseNodeScreenState extends ConsumerState<ChooseNodeScreen> {
     _busy = true;
     final l10n = AppLocalizations.of(context);
     setState(() => _selecting = entry.pubkey);
+    // The first node of this install: the one moment notifications are
+    // offered (a solver who switches node later is not asked).
+    final first = ref.read(activeNodeProvider) == null;
     try {
       await ref.read(activeNodeProvider.notifier).select(entry.pubkey);
       if (!mounted) return;
+      if (first) {
+        await offerPushNotifications(context, ref);
+        if (!mounted) return;
+      }
       if (widget.onboarding) {
         context.go(AppRoute.pending);
       } else {

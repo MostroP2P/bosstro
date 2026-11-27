@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:bosstro/core/app_theme.dart';
 import 'package:bosstro/features/notifications/providers/push_providers.dart';
 import 'package:bosstro/features/notifications/services/push_core.dart';
+import 'package:bosstro/features/notifications/widgets/push_dialogs.dart';
 import 'package:bosstro/features/settings/widgets/settings_switch_row.dart';
 import 'package:bosstro/l10n/app_localizations.dart';
-import 'package:bosstro/shared/widgets/mostro_modal.dart';
 import 'package:bosstro/shared/widgets/order_data_card.dart';
 import 'package:bosstro/shared/widgets/redesign_app_bar.dart';
 import 'package:bosstro/shared/widgets/warning_note.dart';
@@ -54,37 +54,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     } finally {
       if (mounted) setState(() => _turning = null);
     }
-    if (!mounted) return;
-    final l10n = AppLocalizations.of(context);
-    switch (result) {
-      case PushEnableResult.permissionDenied:
-        await _inform(
-          l10n.notificationsBlockedTitle,
-          l10n.notificationsBlockedBody,
-        );
-      case PushEnableResult.unavailable:
-        await _inform(
-          l10n.notificationsUnavailableTitle,
-          l10n.notificationsUnavailableBody,
-        );
-      case PushEnableResult.enabled || null:
-        break;
-    }
+    if (!mounted || result == null) return;
+    await showPushEnableFailure(context, result);
   }
-
-  Future<void> _inform(String title, String body) => showMostroDialog<void>(
-    context: context,
-    builder:
-        (dialog) => MostroDialog(
-          icon: Icons.notifications_off_outlined,
-          title: title,
-          body: body,
-          primary: ModalAction(
-            label: MaterialLocalizations.of(dialog).okButtonLabel,
-            onPressed: () => Navigator.of(dialog).pop(),
-          ),
-        ),
-  );
 
   @override
   Widget build(BuildContext context) {

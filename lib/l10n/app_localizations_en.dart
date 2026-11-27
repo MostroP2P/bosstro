@@ -2008,4 +2008,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notificationsUnavailableBody =>
       'They need Google Play Services and an internet connection. Check both and try again.';
+
+  @override
+  String get pushOfferTitle => 'Turn on notifications of new disputes?';
+
+  @override
+  String get pushOfferBody =>
+      'Your phone can ring when a dispute is opened on your node, even with Bosstro closed. Google delivers the notification, and the notification server sees your IP address and which node you follow. You can change this in Settings.';
+
+  @override
+  String get pushOfferAccept => 'Turn on notifications';
+
+  @override
+  String get pushOfferDecline => 'Not now';
 }

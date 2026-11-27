@@ -2527,5 +2527,21 @@
   "notificationsUnavailableBody": "They need Google Play Services and an internet connection. Check both and try again.",
   "@notificationsUnavailableBody": {
     "description": "Dialog body: why no token came, and what to check"
+  },
+  "pushOfferTitle": "Turn on notifications of new disputes?",
+  "@pushOfferTitle": {
+    "description": "Dialog shown once, after the solver picks a node for the first time: the question"
+  },
+  "pushOfferBody": "Your phone can ring when a dispute is opened on your node, even with Bosstro closed. Google delivers the notification, and the notification server sees your IP address and which node you follow. You can change this in Settings.",
+  "@pushOfferBody": {
+    "description": "Dialog body: what the notification does and what turning it on shares with whom"
+  },
+  "pushOfferAccept": "Turn on notifications",
+  "@pushOfferAccept": {
+    "description": "Dialog answer: turn notifications on (asks the OS for permission next)"
+  },
+  "pushOfferDecline": "Not now",
+  "@pushOfferDecline": {
+    "description": "Dialog answer: leave notifications off; nothing is asked again"
   }
 }

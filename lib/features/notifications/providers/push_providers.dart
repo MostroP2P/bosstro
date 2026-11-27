@@ -120,6 +120,18 @@ class PushController extends Notifier<PushState> {
     }
   });
 
+  /// Whether to offer notifications now: where they can be received, at
+  /// most once per install, and never while they are on.
+  Future<bool> takeOffer() => _serial(() async {
+    if (!_canPush) return false;
+    try {
+      return await _core.takeOffer();
+    } catch (e) {
+      debugPrint('[push] offer not read: ${e.runtimeType}');
+      return false;
+    }
+  });
+
   /// The solver accepts: ask for the permission, then for a token, and hand
   /// it to the core. In that order: a refused permission asks Google for
   /// nothing.

@@ -68,6 +68,13 @@ pub async fn push_enabled() -> bool {
     watcher().enabled(crate::db::app_db::db()).await
 }
 
+/// Whether to offer the solver notifications now. Yes at most once in the
+/// life of the install, and never when they are already on: asking marks the
+/// offer as made.
+pub async fn take_push_offer() -> bool {
+    watcher().take_offer(crate::db::app_db::db()).await
+}
+
 /// Turn the notifications of new disputes on or off, and bring the push
 /// server in step: turning them off drops the watch. Dart deletes the
 /// device's token itself and says so with [`set_push_token`].

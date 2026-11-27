@@ -568,5 +568,9 @@
   "notificationsBlockedTitle": "As notificações estão bloqueadas",
   "notificationsBlockedBody": "Permita as notificações do Bosstro nas configurações do telefone e ative-as aqui de novo.",
   "notificationsUnavailableTitle": "As notificações não estão disponíveis",
-  "notificationsUnavailableBody": "Elas precisam do Google Play Services e de conexão com a internet. Verifique os dois e tente de novo."
+  "notificationsUnavailableBody": "Elas precisam do Google Play Services e de conexão com a internet. Verifique os dois e tente de novo.",
+  "pushOfferTitle": "Ativar as notificações de novas disputas?",
+  "pushOfferBody": "Seu telefone pode tocar quando uma disputa é aberta no seu nó, mesmo com o Bosstro fechado. O Google entrega a notificação, e o servidor de notificações vê seu endereço IP e qual nó você segue. Você pode mudar isso em Configurações.",
+  "pushOfferAccept": "Ativar notificações",
+  "pushOfferDecline": "Agora não"
 }

@@ -568,5 +568,9 @@
   "notificationsBlockedTitle": "Le notifiche sono bloccate",
   "notificationsBlockedBody": "Consenti le notifiche di Bosstro nelle impostazioni del telefono, poi riattivale qui.",
   "notificationsUnavailableTitle": "Le notifiche non sono disponibili",
-  "notificationsUnavailableBody": "Servono Google Play Services e una connessione a internet. Controlla entrambi e riprova."
+  "notificationsUnavailableBody": "Servono Google Play Services e una connessione a internet. Controlla entrambi e riprova.",
+  "pushOfferTitle": "Attivare le notifiche delle nuove dispute?",
+  "pushOfferBody": "Il telefono può suonare quando viene aperta una disputa sul tuo nodo, anche con Bosstro chiuso. Google consegna la notifica e il server delle notifiche vede il tuo indirizzo IP e quale nodo segui. Puoi cambiarlo in Impostazioni.",
+  "pushOfferAccept": "Attiva le notifiche",
+  "pushOfferDecline": "Non ora"
 }

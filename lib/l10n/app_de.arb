@@ -568,5 +568,9 @@
   "notificationsBlockedTitle": "Benachrichtigungen sind blockiert",
   "notificationsBlockedBody": "Erlaube Benachrichtigungen für Bosstro in den Einstellungen deines Telefons und schalte sie hier wieder ein.",
   "notificationsUnavailableTitle": "Benachrichtigungen sind nicht verfügbar",
-  "notificationsUnavailableBody": "Sie brauchen die Google Play-Dienste und eine Internetverbindung. Prüfe beides und versuche es erneut."
+  "notificationsUnavailableBody": "Sie brauchen die Google Play-Dienste und eine Internetverbindung. Prüfe beides und versuche es erneut.",
+  "pushOfferTitle": "Benachrichtigungen für neue Streitfälle einschalten?",
+  "pushOfferBody": "Dein Telefon kann klingeln, wenn auf deinem Node ein Streitfall eröffnet wird, auch wenn Bosstro geschlossen ist. Google stellt die Benachrichtigung zu, und der Benachrichtigungsserver sieht deine IP-Adresse und welchem Node du folgst. Du kannst das in den Einstellungen ändern.",
+  "pushOfferAccept": "Benachrichtigungen einschalten",
+  "pushOfferDecline": "Nicht jetzt"
 }

@@ -245,6 +245,9 @@ void main() {
       final core = await open(tester);
       await tester.tap(find.text('Mostro Cuba'));
       await tester.pumpAndSettle();
+      // The first node of an install: notifications are offered once.
+      await tester.tap(find.text('Not now'));
+      await tester.pumpAndSettle();
       expect(core.log, ['select:$cubaPubkey']);
       expect(find.byType(DisputesScreen), findsOneWidget);
       // The app bar names the node, and the relays in words.
@@ -311,6 +314,9 @@ void main() {
       await tester.scrollUntilVisible(find.text('mostro-cuba-lnd'), 300);
 
       await tester.tap(find.text('Use this node'));
+      await tester.pumpAndSettle();
+      // The first node of an install: notifications are offered once.
+      await tester.tap(find.text('Not now'));
       await tester.pumpAndSettle();
       expect(core.log, ['select:$cubaPubkey']);
       expect(find.byType(DisputesScreen), findsOneWidget);
@@ -579,6 +585,9 @@ void main() {
       expect(find.text('Choose your node'), findsOneWidget);
 
       await tester.tap(find.text('Mostro'));
+      await tester.pumpAndSettle();
+      // The first node of an install: notifications are offered once.
+      await tester.tap(find.text('Not now'));
       await tester.pumpAndSettle();
       expect(nodes.active, mostroNodePubkey);
       expect(find.byType(DisputesScreen), findsOneWidget);

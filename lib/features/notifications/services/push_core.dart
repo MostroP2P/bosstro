@@ -18,6 +18,10 @@ abstract class PushCore {
 
   /// Make the push server agree with what should be watched now.
   Future<push_api.PushWatchStatus> reconcile();
+
+  /// Whether to offer notifications now: yes at most once per install, and
+  /// never while they are on. Asking marks the offer as made.
+  Future<bool> takeOffer();
 }
 
 class RustPushCore implements PushCore {
@@ -36,4 +40,7 @@ class RustPushCore implements PushCore {
 
   @override
   Future<push_api.PushWatchStatus> reconcile() => push_api.reconcilePush();
+
+  @override
+  Future<bool> takeOffer() => push_api.takePushOffer();
 }
