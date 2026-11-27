@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bosstro/core/app.dart';
 import 'package:bosstro/core/app_routes.dart';
 import 'package:bosstro/core/font_licenses.dart';
+import 'package:bosstro/core/lifecycle/app_lifecycle_service.dart';
 import 'package:bosstro/core/services/solver_key_service.dart';
 import 'package:bosstro/core/services/storage/app_storage.dart';
 import 'package:bosstro/core/startup_sequence.dart';
@@ -86,6 +87,11 @@ Future<void> _startup(StartupSequence startup) async {
     }
   });
 
+  // Back from the background, where Android froze the process and its relay
+  // connections died: reconnect now and have every list read again. Lives
+  // as long as the process, so it is never detached.
+  AppLifecycleService(onResume: _resync).attach();
+
   startup.currentStep = 'building the interface';
   runApp(
     ProviderScope(
@@ -101,5 +107,13 @@ Future<void> _startup(StartupSequence startup) async {
         initialLocation: AppRoute.home(hasNode: activeNode != null),
       ),
     ),
+  );
+}
+
+Future<void> _resync() async {
+  final outcome = await relays_api.resync();
+  debugPrint(
+    '[lifecycle] resync: online=${outcome.online} '
+    'coalesced=${outcome.coalesced}',
   );
 }

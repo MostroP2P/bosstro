@@ -662,6 +662,25 @@ pub(crate) fn subscribe_updates() -> broadcast::Receiver<DisputeUpdate> {
     updates().subscribe()
 }
 
+/// Tell whoever shows the active node's disputes to read them again, with an
+/// update that names none (what a reader that fell behind gets too). For the
+/// app's resume: a list also changes with time alone (a dispute past its
+/// NIP-40 expiration leaves), which no relay event announces.
+pub(crate) fn announce_reread() {
+    if let Some(node) = crate::config::active_mostro_pubkey() {
+        announce_reread_of(node);
+    }
+}
+
+fn announce_reread_of(node: String) {
+    // No receiver (Dart not listening yet) is not an error.
+    let _ = updates().send(DisputeUpdate {
+        synced: is_synced(&node),
+        mostro_pubkey: node,
+        dispute: None,
+    });
+}
+
 /// Start the feed on the relay pool's client and point it at the active
 /// node. Called once the pool exists (`api::relays::initialize_relays`);
 /// later calls only re-point it.
@@ -717,6 +736,27 @@ pub(crate) async fn memory_rows(node: &str, status: DisputeStatus) -> Vec<Disput
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
+
+    /// The update of a resume names no dispute, which every reader takes as
+    /// "read again".
+    #[tokio::test]
+    async fn a_reread_is_announced_as_an_update_that_names_no_dispute() {
+        // Arrange: the channel is the process's, shared with other tests.
+        let node = "reread-test-node".to_string();
+        let mut rx = subscribe_updates();
+
+        // Act
+        announce_reread_of(node.clone());
+
+        // Assert
+        let update = loop {
+            let update = rx.recv().await.expect("an update");
+            if update.mostro_pubkey == node {
+                break update;
+            }
+        };
+        assert!(update.dispute.is_none());
+    }
     use crate::disputes::event::tests::{mostrod_event, DISPUTE_ID};
     use nostr_sdk::local_relay::{LocalRelayBuilder, MockRelay, RateLimit};
     use nostr_sdk::prelude::Keys;

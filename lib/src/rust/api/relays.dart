@@ -57,7 +57,9 @@ Future<RelayStatusStream> onRelayStatusChanged() =>
 /// relays found disconnected are reconnected now rather than at their next
 /// retry, and every live subscription a relay lacks is issued again
 /// ([`crate::nostr::resync`]). The relays then send what they hold, so the
-/// streams of disputes, answers and chats deliver what was missed.
+/// streams of disputes, answers and chats deliver what was missed. The pass
+/// starts by telling the dispute lists to read again, for what changed with
+/// time alone.
 ///
 /// Safe to call at any time and more than once: calls made while a pass runs
 /// share it, and a pass over a healthy pool changes nothing. Before the pool

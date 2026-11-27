@@ -88,7 +88,12 @@ pub(crate) fn pool() -> Result<&'static Arc<RelayPool>> {
 /// (MostroP2P/app).
 pub async fn initialize_relays() -> Result<()> {
     if POOL.get().is_some() {
-        log::info!("[relay] pool already running — re-attaching");
+        // The process may have been frozen in between, with no Dart alive to
+        // see the app come back: this start is that resume.
+        log::info!("[relay] pool already running — re-attaching and resyncing");
+        crate::rt::spawn(async {
+            resync().await;
+        });
         return Ok(());
     }
 
@@ -254,7 +259,9 @@ pub struct ResyncOutcome {
 /// relays found disconnected are reconnected now rather than at their next
 /// retry, and every live subscription a relay lacks is issued again
 /// ([`crate::nostr::resync`]). The relays then send what they hold, so the
-/// streams of disputes, answers and chats deliver what was missed.
+/// streams of disputes, answers and chats deliver what was missed. The pass
+/// starts by telling the dispute lists to read again, for what changed with
+/// time alone.
 ///
 /// Safe to call at any time and more than once: calls made while a pass runs
 /// share it, and a pass over a healthy pool changes nothing. Before the pool
@@ -269,6 +276,9 @@ pub async fn resync() -> ResyncOutcome {
                 log::info!("[relay] resync: no relay pool yet, nothing to do");
                 return false;
             };
+            // First, so what changed with time alone shows without waiting
+            // for the relays; what they send announces itself.
+            crate::disputes::feed::announce_reread();
             crate::nostr::resync::pass(&pool.client(), crate::nostr::live_subs::live_subs()).await
         })
         .await;
