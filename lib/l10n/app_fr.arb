@@ -291,7 +291,7 @@
   "detailFiatAmount": "Montant fiat",
   "detailPaymentMethod": "Moyen de paiement",
   "detailPremium": "Prime",
-  "detailFee": "Frais du nœud",
+  "detailFee": "Frais du nœud (chaque partie)",
   "detailOrderKind": "Type d'ordre",
   "detailBuyerKey": "Clé de transaction de l'acheteur",
   "detailSellerKey": "Clé de transaction du vendeur",

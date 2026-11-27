@@ -1049,7 +1049,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get detailPremium => 'Premio';
 
   @override
-  String get detailFee => 'Commissione del nodo';
+  String get detailFee => 'Commissione del nodo (ogni parte)';
 
   @override
   String get detailOrderKind => 'Tipo di ordine';

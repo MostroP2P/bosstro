@@ -1052,7 +1052,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get detailPremium => 'Prêmio';
 
   @override
-  String get detailFee => 'Taxa do nó';
+  String get detailFee => 'Taxa do nó (cada parte)';
 
   @override
   String get detailOrderKind => 'Tipo de ordem';

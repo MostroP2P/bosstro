@@ -291,7 +291,7 @@
   "detailFiatAmount": "Fiat-Betrag",
   "detailPaymentMethod": "Zahlungsmethode",
   "detailPremium": "Aufschlag",
-  "detailFee": "Node-Gebühr",
+  "detailFee": "Node-Gebühr (jede Partei)",
   "detailOrderKind": "Order-Typ",
   "detailBuyerKey": "Trade-Schlüssel des Käufers",
   "detailSellerKey": "Trade-Schlüssel des Verkäufers",

@@ -1854,10 +1854,10 @@ abstract class AppLocalizations {
   /// **'Premium'**
   String get detailPremium;
 
-  /// Data row: the node's fee for the order, in sats
+  /// Data row: the node's fee for the order, in sats. It is what each party pays, so half of what the node charges for the order
   ///
   /// In en, this message translates to:
-  /// **'Node fee'**
+  /// **'Node fee (each party)'**
   String get detailFee;
 
   /// Data row: whether the order was a buy or a sell order

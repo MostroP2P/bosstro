@@ -1050,7 +1050,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get detailPremium => 'Prime';
 
   @override
-  String get detailFee => 'Frais du nœud';
+  String get detailFee => 'Frais du nœud (chaque partie)';
 
   @override
   String get detailOrderKind => 'Type d\'ordre';

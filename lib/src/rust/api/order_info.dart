@@ -301,7 +301,8 @@ class OrderSnapshot {
   /// Sats.
   final PlatformInt64 amount;
 
-  /// The node's fee, sats.
+  /// The node's fee, sats: what each party pays, half of what the node charges
+  /// for the order (mostrod `get_fee`).
   final PlatformInt64 fee;
 
   /// What routing the payment to the buyer cost, sats.
