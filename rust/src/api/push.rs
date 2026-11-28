@@ -145,7 +145,7 @@ async fn run(key_settled: bool) -> Result<Outcome> {
         }
     };
     watcher()
-        .reconcile_with(crate::db::app_db::db(), inputs, crate::rt::unix_now())
+        .reconcile_with(crate::db::app_db::db(), inputs, crate::rt::unix_now)
         .await
 }
 

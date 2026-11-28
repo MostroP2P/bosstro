@@ -152,6 +152,12 @@ struct Stored {
     /// The solver was asked once whether they want notifications.
     #[serde(default)]
     offered: bool,
+    /// What was stored before could not be understood and this started
+    /// over: the watches and the token it named are forgotten here, and may
+    /// live on with the server and with Google. Until Dart was told
+    /// ([`Watcher::take_lost`]).
+    #[serde(default)]
+    lost: bool,
 }
 
 /// Where the watch stands. Markers: Dart maps them to its own copy.
@@ -217,11 +223,12 @@ struct Inner {
     hold: Option<Hold>,
     /// Failures that may pass, in a row.
     failures: usize,
-    /// What was stored could not be understood and was started over: the
-    /// watches and the token it named are forgotten here, and may live on
-    /// with the server and with Google. Told to Dart once
-    /// ([`Watcher::take_lost`]).
-    lost: bool,
+    /// The unwatches that failed are not tried again before this (Unix
+    /// seconds), whoever asks for a run: the screen asks every few seconds
+    /// while the server is down. With it, what was wanted when the wait
+    /// began: once that changes, other unwatches may be due (one that was
+    /// held back for a node the solver has now left), and the wait is off.
+    unwatch_not_before: Option<(i64, Option<Target>)>,
 }
 
 /// Keeps one push server's watch in step with the rule.
@@ -268,10 +275,15 @@ impl Watcher {
     /// do from a switch that now reads off.
     pub(crate) async fn take_lost(&self, db: Option<&impl WatchStore>) -> bool {
         let mut inner = self.inner.lock().await;
-        if stored(&mut inner, db).await.is_err() {
+        let Ok(stored) = stored(&mut inner, db).await else {
+            return false;
+        };
+        if !stored.lost {
             return false;
         }
-        std::mem::take(&mut inner.lost)
+        stored.lost = false;
+        save(db, stored).await;
+        true
     }
 
     /// Whether to offer notifications to the solver now, which is said yes
@@ -339,7 +351,7 @@ impl Watcher {
         inputs: &Inputs,
         now: i64,
     ) -> Outcome {
-        self.reconcile_with(db, || async { inputs.clone() }, now)
+        self.reconcile_with(db, || async { inputs.clone() }, || now)
             .await
             .expect("what is stored is read")
     }
@@ -350,7 +362,8 @@ impl Watcher {
     /// `inputs` is asked once this run holds the lock, not before: runs
     /// queue for it, and one that read the active node while it waited
     /// could put back the node the solver has just left, after the run
-    /// that registered the new one.
+    /// that registered the new one. `now` (Unix seconds) is asked then too:
+    /// a time read before a long wait would date a new wait in the past.
     ///
     /// **Errors**: `StorageUnavailable`, when what is stored could not be
     /// read: nothing is asked of the server and nothing is written, since
@@ -359,7 +372,7 @@ impl Watcher {
         &self,
         db: Option<&impl WatchStore>,
         inputs: F,
-        now: i64,
+        now: impl FnOnce() -> i64,
     ) -> anyhow::Result<Outcome>
     where
         F: FnOnce() -> Fut,
@@ -367,12 +380,13 @@ impl Watcher {
     {
         let mut inner = self.inner.lock().await;
         let inputs = inputs().await;
+        let now = now();
         stored(&mut inner, db).await?;
         let Inner {
             stored: Some(stored),
             hold,
             failures,
-            ..
+            unwatch_not_before,
         } = &mut *inner
         else {
             unreachable!("stored() fills it");
@@ -415,8 +429,11 @@ impl Watcher {
             }),
             _ => None,
         };
-        // What made the old target wait says nothing of this one.
-        if hold.as_ref().map(|hold| &hold.target) != wanted.as_ref() {
+        // What made the old target wait says nothing of another one. With
+        // nothing wanted for a moment (no node, no key) the wait is kept:
+        // the same target may be wanted again before it is over, and the
+        // server said when to come back.
+        if wanted.is_some() && hold.as_ref().map(|hold| &hold.target) != wanted.as_ref() {
             *hold = None;
             *failures = 0;
         }
@@ -432,6 +449,8 @@ impl Watcher {
                 && !stored.unwatch.iter().any(|pending| pending.target == target)
             {
                 stored.unwatch.push(PendingUnwatch { target, since: now });
+                // A new one is tried now, whatever the others are waiting.
+                *unwatch_not_before = None;
             }
         }
         if stored.watch.as_ref().map(|watch| &watch.target) != wanted.as_ref() {
@@ -462,9 +481,17 @@ impl Watcher {
         };
 
         // 2. The unwatches. The first that cannot reach the server ends the
-        // round: the others would wait out the same timeout.
+        // round: the others would wait out the same timeout. A round that
+        // left some to do is not made again before its wait is over.
+        let waiting = unwatch_not_before.as_ref().is_some_and(|(until, then_wanted)| {
+            *then_wanted == wanted && now < *until && *until - now <= UNWATCH_RETRY_SECS
+        });
         let mut left = Vec::new();
+        let mut failed = false;
         let mut pending = std::mem::take(&mut stored.unwatch).into_iter();
+        if waiting {
+            left.extend(pending.by_ref());
+        }
         for unwatch in pending.by_ref() {
             // Wanted again (the solver switched back): not sent, and kept
             // until the server takes the watch. Dropped before that, a
@@ -481,16 +508,21 @@ impl Watcher {
                 Ok(reply) => {
                     log::info!("[push] unwatch not done: server returned {}", reply.status);
                     left.push(unwatch);
+                    failed = true;
                 }
                 Err(e) => {
                     log::info!("[push] unwatch not done: {e}");
                     left.push(unwatch);
+                    failed = true;
                     break;
                 }
             }
         }
         left.extend(pending);
         stored.unwatch = left;
+        if !waiting {
+            *unwatch_not_before = failed.then(|| (now + UNWATCH_RETRY_SECS, wanted.clone()));
+        }
 
         // 3. The wanted watch.
         let status = match &wanted {
@@ -561,15 +593,20 @@ impl Watcher {
         if *stored != before {
             save(db, stored).await;
         }
+        // A wait kept for a target nobody wants now asks for no run.
         let watch_retry = hold
             .as_ref()
+            .filter(|_| wanted.is_some())
             .and_then(|hold| hold.until)
             .map(|until| (until - now).max(1));
         let unwatch_retry = stored
             .unwatch
             .iter()
             .any(|pending| Some(&pending.target) != wanted.as_ref())
-            .then_some(UNWATCH_RETRY_SECS);
+            .then(|| match unwatch_not_before {
+                Some((until, _)) => (*until - now).clamp(1, UNWATCH_RETRY_SECS),
+                None => UNWATCH_RETRY_SECS,
+            });
         Ok(Outcome {
             status,
             retry_in: match (watch_retry, unwatch_retry) {
@@ -690,7 +727,8 @@ async fn post(server: &str, action: &str, target: &Target) -> anyhow::Result<Rep
 ///
 /// - Without storage, or with nothing stored, it starts empty: off.
 /// - Stored and not understood (not this JSON): it starts over, and says
-///   so ([`Inner::lost`]).
+///   so ([`Stored::lost`]). The clean state is written at once: left
+///   unwritten, every start would find the same row and start over again.
 /// - **Not read** (the storage failed): `StorageUnavailable`, and nothing
 ///   is kept, so the next call reads again. Taking it for empty would show
 ///   the switch off, forget every watch the server holds, and let the next
@@ -706,8 +744,12 @@ async fn stored<'a>(
                     Ok(stored) => stored,
                     Err(_) => {
                         log::warn!("[push] the stored watch is not readable; starting over");
-                        inner.lost = true;
-                        Stored::default()
+                        let fresh = Stored {
+                            lost: true,
+                            ..Stored::default()
+                        };
+                        save(Some(db), &fresh).await;
+                        fresh
                     }
                 },
                 Ok(None) => Stored::default(),
@@ -962,9 +1004,19 @@ mod tests {
         assert_eq!(switched.status, Status::Registered);
         assert_eq!(switched.retry_in, Some(UNWATCH_RETRY_SECS));
 
-        // The next run tries the unwatch again, and only that.
+        // Before its wait is over the unwatch is not tried again, whoever
+        // asks: the screen does every few seconds.
         unwatch.store(200, Ordering::SeqCst);
-        let later = watcher.reconcile(Some(&db), &on(NODE_B), NOW + 60).await;
+        for soon in [10, 60, UNWATCH_RETRY_SECS - 1] {
+            let early = watcher.reconcile(Some(&db), &on(NODE_B), NOW + 5 + soon).await;
+            assert_eq!(early.retry_in, Some(UNWATCH_RETRY_SECS - soon));
+        }
+        assert_eq!(seen.lock().unwrap().len(), 3);
+
+        // Then it is, and only that.
+        let later = watcher
+            .reconcile(Some(&db), &on(NODE_B), NOW + 5 + UNWATCH_RETRY_SECS)
+            .await;
         assert_eq!(later.retry_in, None);
 
         assert_eq!(
@@ -1122,7 +1174,9 @@ mod tests {
         assert_eq!(switched.retry_in, Some(UNWATCH_RETRY_SECS));
 
         unwatch.store(200, Ordering::SeqCst);
-        watcher.reconcile(Some(&db), &on(NODE_B), NOW + 60).await;
+        watcher
+            .reconcile(Some(&db), &on(NODE_B), NOW + 5 + UNWATCH_RETRY_SECS)
+            .await;
 
         assert_eq!(asked(&seen).last(), Some(&call("unwatch", NODE_A, TOKEN)));
     }
@@ -1149,7 +1203,7 @@ mod tests {
                             // By now the solver is on B.
                             on(NODE_B)
                         },
-                        NOW,
+                        || NOW,
                     )
                     .await
                     .unwrap()
@@ -1528,9 +1582,22 @@ mod tests {
 
         let watcher = Watcher::new(None);
         assert!(!watcher.enabled(Some(&db)).await.unwrap());
-        // Said once, for Dart to delete the device's token.
+        // Said once, for Dart to delete the device's token; not again after
+        // a restart either, since the clean state was written.
         assert!(watcher.take_lost(Some(&db)).await);
         assert!(!watcher.take_lost(Some(&db)).await);
+        assert!(!Watcher::new(None).take_lost(Some(&db)).await);
+
+        // A process that stops before Dart was told: the next one tells it,
+        // and finds a row it can read, so it does not start over again.
+        let db = store().await;
+        db.set_setting(settings_keys::PUSH_WATCH, "not json")
+            .await
+            .unwrap();
+        assert!(!Watcher::new(None).enabled(Some(&db)).await.unwrap());
+        let restarted = Watcher::new(None);
+        assert!(restarted.take_lost(Some(&db)).await);
+        assert!(!Watcher::new(None).take_lost(Some(&db)).await);
     }
 
     #[tokio::test]
@@ -1640,7 +1707,9 @@ mod tests {
         watcher.reconcile(Some(&db), &no_key(true), NOW + 5).await;
 
         unwatch.store(200, Ordering::SeqCst);
-        let retried = watcher.reconcile(Some(&db), &no_key(false), NOW + 60).await;
+        let retried = watcher
+            .reconcile(Some(&db), &no_key(false), NOW + 5 + UNWATCH_RETRY_SECS)
+            .await;
 
         assert_eq!(retried.retry_in, None);
         assert_eq!(asked(&seen).last(), Some(&call("unwatch", NODE_A, TOKEN)));
@@ -1697,7 +1766,7 @@ mod tests {
         assert!(!watcher.take_offer(Some(&db)).await);
         assert!(!watcher.take_lost(Some(&db)).await);
         let failed = watcher
-            .reconcile_with(Some(&db), || async { on(NODE_A) }, NOW + 5)
+            .reconcile_with(Some(&db), || async { on(NODE_A) }, || NOW + 5)
             .await;
         assert!(failed.is_err());
         assert_eq!(seen.lock().unwrap().len(), 1, "nothing asked of the server");
@@ -1706,11 +1775,117 @@ mod tests {
         db.fails.store(false, Ordering::SeqCst);
         assert!(watcher.enabled(Some(&db)).await.unwrap());
         let outcome = watcher
-            .reconcile_with(Some(&db), || async { on(NODE_A) }, NOW + 10)
+            .reconcile_with(Some(&db), || async { on(NODE_A) }, || NOW + 10)
             .await
             .unwrap();
         assert_eq!(outcome.status, Status::Registered);
         assert_eq!(seen.lock().unwrap().len(), 1, "the stored watch is fresh");
+    }
+
+    /// A new unwatch does not wait for the ones that failed before it.
+    #[tokio::test]
+    async fn a_new_unwatch_is_tried_at_once_while_older_ones_wait() {
+        let (base, seen, _watch, unwatch) = server(200, 500).await;
+        let db = store().await;
+        let watcher = ready(&base, &db).await;
+        watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+        watcher.reconcile(Some(&db), &on(NODE_B), NOW + 5).await;
+
+        // The server is back, and the solver leaves B too, a minute later.
+        unwatch.store(200, Ordering::SeqCst);
+        seen.lock().unwrap().clear();
+        let third = format!("{:064x}", 3);
+        let out = watcher.reconcile(Some(&db), &on(&third), NOW + 60).await;
+
+        assert_eq!(out.retry_in, None);
+        assert_eq!(
+            asked(&seen),
+            vec![
+                call("unwatch", NODE_A, TOKEN),
+                call("unwatch", NODE_B, TOKEN),
+                call("watch", &third, TOKEN),
+            ]
+        );
+    }
+
+    /// The node or the key gone for a moment does not make the server be
+    /// asked again before the time it named.
+    #[tokio::test]
+    async fn a_wait_outlives_a_moment_with_nothing_wanted() {
+        let (base, seen) =
+            serve_with(|_| (429, vec![("Retry-After", "90".to_string())])).await;
+        let db = store().await;
+        let watcher = ready(&base, &db).await;
+        watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+
+        let nothing = Inputs {
+            node: None,
+            has_key: true,
+            key_settled: true,
+        };
+        let idle = watcher.reconcile(Some(&db), &nothing, NOW + 10).await;
+        assert_eq!(
+            idle,
+            Outcome {
+                status: Status::Waiting,
+                retry_in: None
+            }
+        );
+        let back = watcher.reconcile(Some(&db), &on(NODE_A), NOW + 20).await;
+
+        assert_eq!(
+            back,
+            Outcome {
+                status: Status::RateLimited,
+                retry_in: Some(70)
+            }
+        );
+        assert_eq!(seen.lock().unwrap().len(), 1);
+        // Another node is another question.
+        watcher.reconcile(Some(&db), &on(NODE_B), NOW + 30).await;
+        assert_eq!(seen.lock().unwrap().len(), 2);
+    }
+
+    /// A run that waited its turn dates what it does from when it runs.
+    #[tokio::test]
+    async fn the_time_is_read_once_the_run_holds_its_turn() {
+        let (base, _seen) =
+            serve_with(|_| (429, vec![("Retry-After", "60".to_string())])).await;
+        let db = Arc::new(store().await);
+        let watcher = Arc::new(ready(&base, &db).await);
+        let clock = Arc::new(std::sync::atomic::AtomicI64::new(NOW));
+
+        let turn = watcher.inner.lock().await;
+        let waiting = {
+            let (watcher, db, clock) = (watcher.clone(), db.clone(), clock.clone());
+            tokio::spawn(async move {
+                watcher
+                    .reconcile_with(
+                        Some(&*db),
+                        || async { on(NODE_A) },
+                        move || clock.load(Ordering::SeqCst),
+                    )
+                    .await
+                    .unwrap()
+            })
+        };
+        for _ in 0..10 {
+            tokio::task::yield_now().await;
+        }
+        // Ninety seconds behind another run.
+        clock.store(NOW + 90, Ordering::SeqCst);
+        drop(turn);
+        waiting.await.unwrap();
+
+        // The wait of sixty seconds is still on, thirty seconds later.
+        let later = watcher.reconcile(Some(&*db), &on(NODE_A), NOW + 120).await;
+        assert_eq!(
+            later,
+            Outcome {
+                status: Status::RateLimited,
+                retry_in: Some(30)
+            }
+        );
     }
 
     #[tokio::test]
