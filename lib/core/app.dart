@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:bosstro/core/app_routes.dart';
 import 'package:bosstro/core/app_theme.dart';
+import 'package:bosstro/features/notifications/providers/push_providers.dart';
 import 'package:bosstro/features/settings/providers/language_provider.dart';
 import 'package:bosstro/features/solver_key/providers/solver_key_providers.dart';
 import 'package:bosstro/l10n/app_localizations.dart';
@@ -51,6 +52,10 @@ class _BosstroAppState extends ConsumerState<BosstroApp> {
   @override
   Widget build(BuildContext context) {
     ref.listen(solverKeyProvider, (_, next) => _signedIn.value = next != null);
+    // A tap on a new-dispute notification, with the app in the background on
+    // any screen: the pending disputes, where the new one is. Without a key
+    // the redirect sends it to Welcome, as any location.
+    ref.listen(newDisputeTapsProvider, (_, _) => _router.go(AppRoute.pending));
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appName,
       debugShowCheckedModeBanner: false,

@@ -40,6 +40,7 @@ ARB files (`lib/l10n/app_en.arb` is the source).
 | A3 | l10n: `en`, `es`, `it`, `fr`, `de`, `nl` and `pt` (Brazil), as `app`; English is the source. The app follows the system's language until the solver picks one in Settings (kept in Rust). |
 | A4 | Storage per platform, as `app`: SQLite (`sqlx`) on native, IndexedDB on the web, behind one `Storage` trait. SQLCipher is post-MVP; until then the database relies on the Android app sandbox (on Linux and the web it is not encrypted). |
 | A8 | Android `applicationId` / namespace `foundation.mostro.bosstro` (it must differ from `app`'s, or one install replaces the other). |
+| A9 | Push notifications of a new dispute are **off until the solver turns them on**, and Firebase asks Google for nothing before that. The push is a doorbell, as in `app`: it carries no dispute, node or party, Android shows it by itself, and the dispute comes from the relays when the app opens. No Nostr, no key use and no Dart in the background. Android only. |
 
 ## Architecture — the golden rule
 
@@ -55,6 +56,7 @@ ARB files (`lib/l10n/app_en.arb` is the source).
 ```text
 lib/                 # Flutter shell — lib/features/<feature>/{screens,widgets,providers,models}
 lib/core/            # theme, palettes, fonts, radii, routes — the ONLY place tokens are defined
+lib/features/notifications/ # the device side of the new-dispute push: permission, FCM token, the offer, the tap
 lib/shared/widgets/  # shared components (modal, buttons, app bars, chips, data cards)
 lib/shared/mascot/   # the Mostro mascot, ported from app
 lib/l10n/            # ARB files + generated AppLocalizations
@@ -65,7 +67,8 @@ rust/src/chat/       # the dispute chat: channel keys (in memory), the router, s
 rust/src/db/         # Storage: SQLite (native) and IndexedDB (web), one trait
 rust/src/disputes/   # kind 38386: parsing, merge (NIP-01 order), the active node's feed
 rust/src/mostro/     # the daemon's answers to the solver key, AdminTakeDispute, AdminSettle / AdminCancel, AdminOrderInfo, solver standing
-rust/src/nostr/      # the relay pool, live subscriptions, liveness probe, event readers, transport v2
+rust/src/nostr/      # the relay pool, live subscriptions, liveness probe, the resume resync, event readers, transport v2
+rust/src/push/       # mostro-push-server: wake.rs rings a party the solver wrote to; watch.rs has this device rung for the node's new disputes
 rust/migrations/     # sqlx migrations; never edit one that shipped, add a new file
 rust_builder/        # cargokit glue, copied from app
 icons/               # the emblem and every icon format built from it
@@ -154,8 +157,26 @@ Three tabs, branches of one shell (`lib/core/app_routes.dart`), each keeping its
   thread, which stops meanwhile, as the take's PoW.
 - **The new-dispute push is in the system's language**, not the one picked in Settings (A3):
   Android resolves its title, its body and its channel's name from the app's string resources by
-  the phone's locale, and the solver's choice lives in Rust. (The resources are in place; nothing
-  registers for that push yet, issue #61.)
+  the phone's locale, and the solver's choice lives in Rust.
+- **Google is in the path of a push**, for the solver who turned notifications on: the device
+  needs Google Play Services, and FCM learns that a push reached it, never what it is about.
+  Without them no token comes and notifications stay off.
+- **The push server learns** that a device watches a node's disputes, and the device's IP address
+  each time the watch is asked for (at most once a day). Anyone can watch a node: its disputes
+  are public.
+- **Only the nodes the push server trusts ring**, and only when their dispute events reach the
+  relays it listens on. On another node Settings → Notifications says so and nothing rings.
+- **A push is best effort:** FCM may delay or drop it, the server may ring up to two minutes late
+  or again after it restarts, and it rings for a dispute another solver already took. It never
+  replaces reading the relays.
+- **A watch lapses** when the app is not opened for 30 days: it is asked for again only while the
+  app runs (startup, resume, a change), never from the background.
+- **Nothing shows for a push that arrives with the app open:** Android shows a notification
+  message only in the background, and Bosstro adds no message of its own, on any screen.
+- **On a node where Serbero mediates** the solver is rung when the dispute is opened, not when
+  Serbero hands it over: a handover publishes nothing.
+- **The FCM token is stored in the unencrypted database** (A4), with the watch. Alone it lets
+  nobody send a push. It is never logged.
 - The key-handling limits are listed under "Key handling" (2 and 8).
 
 ### Generated code
@@ -288,7 +309,7 @@ python3 tool/launcher_icon/build_sources.py && dart run flutter_launcher_icons  
   debug build may name one local test server (`BOSSTRO_TEST_BLOSSOM_SERVER`), the only `http://`
   origin it fetches from; a release build never reads it. Nothing logs a file key, a blob URL or
   a file's content.
-- **Waking the party** (`rust/src/push.rs`): a chat envelope is `p`-tagged to `pub(K_conv)`, which
+- **Waking the party** (`rust/src/push/wake.rs`): a chat envelope is `p`-tagged to `pub(K_conv)`, which
   [mostro-push-server](https://github.com/MostroP2P/mostro-push-server) cannot match to a
   registration, so after a message of this key was taken by a relay Bosstro asks the server to
   ring the party: `POST /api/notify` with the party's **trade pubkey** and nothing else, as
@@ -302,7 +323,45 @@ python3 tool/launcher_icon/build_sources.py && dart run flutter_launcher_icons  
   debug build may be pointed at a loopback server or told to wake nobody
   (`BOSSTRO_TEST_PUSH_SERVER`, which the end-to-end tests require); a release build never reads it. On the web build
   the server's CORS refuses the request, which is logged like any other undelivered wake. This
-  is only the solver → party direction: push notifications *to* the solver are not implemented.
+  is the solver → party direction; the other one is the next entry.
+- **Watching the node's disputes** (`rust/src/push/watch.rs`, `rust/src/api/push.rs`, issue #61):
+  mostro-push-server rings every device that watches a node when that node publishes a new
+  `initiated` kind 38386. A watch is `POST /api/disputes/watch` with the node's pubkey, the
+  device's FCM token and `"platform": "android"`, and nothing of the solver: no key, no
+  signature. **The rule:** the active node is watched when notifications are on, the device has
+  a token and a key is loaded. `reconcile` makes the server agree with it, one run at a time: a
+  stored watch that is no longer the wanted one (another node or token, turned off, logged out)
+  joins the unwatches to do, and so does a watch that was asked for and never answered (the
+  server may hold it); those are tried, and one that fails **never holds back the new
+  watch**; an unwatch of a node the solver came back to waits until that node's watch is taken; the wanted watch is asked for when it is missing or a day old (the server keeps it 30
+  days). Answers are markers, never text: `200` registered; `400` token refused and `403` node
+  not trusted, asked again only when the token or the node changes; `429` waits its
+  `Retry-After`; anything else is tried again after 30 s, 2 min, 10 min, then every hour, while
+  the process lives. A renewal that fails leaves the watch registered, until it is as old as
+  the server keeps it. The retry task never takes "no key" for a logout (a key being replaced
+  is unloaded first): only a run Dart asks for drops a watch for want of a key. What is stored
+  and could not be read is never taken for empty: the run does nothing and reads again. Stored: the switch, the
+  token, the watch and the unwatches to do (`push_watch`); what makes a run wait is in memory
+  only. Dart asks for a reconcile at startup, on resume and when the node, the key, the token or
+  the switch changes (`PushLifecycle`, `PushController`); a key change is seen there once it
+  settled, never from inside `unload_solver_key`, since replacing a key unloads the old one
+  first and the watch is per node, not per key. Same server and same debug override as the
+  wake.
+- **The device side of the push** (`lib/features/notifications/`): nothing calls Firebase while
+  notifications are off, which is what keeps Google out until the solver accepts (A9). Turning
+  them on asks the OS for the permission, then turns FCM's auto-init on (off in the manifest,
+  and with it off Firebase would not keep the token fresh), then asks for the token; turning
+  them off tells the push server first, while the token still names the device, then deletes
+  the token. They are offered once, right after the first node of an install is picked, and
+  never to an install that already has one. The push is a notification message with no literal
+  title or body: `title_loc_key` / `body_loc_key` name Android string resources
+  (`android/app/src/main/res/values*/strings.xml`, kept equal to the ARB entries by a test, and
+  kept in a release build by `res/raw/keep.xml`), on the channel `bosstro_disputes`, which
+  `MainActivity.kt` creates. A tap with the app in the background opens Pending; a tap that
+  starts the app lands there anyway. firebase_messaging 17 deprecates the token calls
+  (`getToken`, `deleteToken`, `onTokenRefresh`) for ones that hand out a Firebase Installation
+  ID; the push server sends to registration tokens, so the token calls stay and the plugin is
+  pinned. A version without them needs the server to take installation ids first.
 - **Observed chat** (`rust/src/chat/observer.rs`, phase 5c): the buyer ↔ seller chat of a dispute
   this key holds, read only. A party of `app` discloses its chat key (`K_conv`) by sending, in its
   dispute chat with this key, exactly `Shared key: ` + 64 hex characters; it is taken only from
@@ -400,8 +459,8 @@ One PR per phase; long phases split into phased PRs. Conventional commits, branc
 
 Phases: 0 scaffold · 1 solver key · 2 nodes and relays · 3 pending disputes · 4 take dispute ·
 5 dispute detail and chat · 5c observer · 6 resolution · 7 manual verification on a device ·
-8 release (`docs/RELEASING.md`). After the MVP: order lookup (issue #51). Serbero and notifications
-are post-MVP.
+8 release (`docs/RELEASING.md`). After the MVP: order lookup (issue #51) and the notifications of
+new disputes (issue #61). Serbero is post-MVP.
 
 A PR's title is its line in the release notes and `CHANGELOG.md` (`tool/release_notes.dart`
 groups by its conventional-commit type): write it for the solver who reads the release.

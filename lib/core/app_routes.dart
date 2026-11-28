@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:bosstro/features/disputes/screens/dispute_detail_screen.dart';
@@ -9,7 +10,9 @@ import 'package:bosstro/features/nodes/screens/choose_node_screen.dart';
 import 'package:bosstro/features/nodes/screens/node_info_screen.dart';
 import 'package:bosstro/features/nodes/screens/relays_screen.dart';
 import 'package:bosstro/features/orders/screens/orders_screen.dart';
+import 'package:bosstro/features/notifications/providers/push_providers.dart';
 import 'package:bosstro/features/settings/screens/about_screen.dart';
+import 'package:bosstro/features/settings/screens/notifications_screen.dart';
 import 'package:bosstro/features/settings/screens/settings_screen.dart';
 import 'package:bosstro/features/shell/screens/home_shell.dart';
 import 'package:bosstro/features/solver_key/screens/backup_screen.dart';
@@ -54,6 +57,9 @@ abstract final class AppRoute {
 
   /// The app's version, licence and source code, from Settings.
   static const about = '/settings/about';
+
+  /// The new-dispute push: its switch and what it shares, from Settings.
+  static const notifications = '/settings/notifications';
 
   /// A node's instance info.
   static String nodeInfo(String pubkey) => '/node/$pubkey';
@@ -189,6 +195,21 @@ GoRouter buildRouter({
                     path: 'about',
                     parentNavigatorKey: rootKey,
                     builder: (context, state) => const AboutScreen(),
+                  ),
+                  GoRoute(
+                    path: 'notifications',
+                    parentNavigatorKey: rootKey,
+                    // Only where a push can be received. The row that opens
+                    // it is hidden elsewhere, and a typed URL (the web
+                    // build) lands on Settings.
+                    redirect:
+                        (context, state) =>
+                            ProviderScope.containerOf(
+                                  context,
+                                ).read(canPushProvider)
+                                ? null
+                                : AppRoute.settings,
+                    builder: (context, state) => const NotificationsScreen(),
                   ),
                 ],
               ),

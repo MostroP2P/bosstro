@@ -48,7 +48,7 @@ Future<void> startApp(
   tester.platformDispatcher.localesTestValue = [const Locale('en')];
 
   // The core wakes a party through the public push server unless a debug
-  // build is told otherwise (`rust/src/push.rs`): no run may reach it.
+  // build is told otherwise (`rust/src/push/mod.rs`): no run may reach it.
   expect(
     Platform.environment['BOSSTRO_TEST_PUSH_SERVER'],
     isNotNull,

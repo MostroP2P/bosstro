@@ -10,6 +10,7 @@ import 'api/node_info.dart';
 import 'api/nodes.dart';
 import 'api/observer.dart';
 import 'api/order_info.dart';
+import 'api/push.dart';
 import 'api/relays.dart';
 import 'api/resolve.dart';
 import 'api/settings.dart';
@@ -524,6 +525,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProtocolSupport dco_decode_protocol_support(dynamic raw);
+
+  @protected
+  PushWatchStatus dco_decode_push_watch_status(dynamic raw);
 
   @protected
   RelayInfo dco_decode_relay_info(dynamic raw);
@@ -1164,6 +1168,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProtocolSupport sse_decode_protocol_support(SseDeserializer deserializer);
+
+  @protected
+  PushWatchStatus sse_decode_push_watch_status(SseDeserializer deserializer);
 
   @protected
   RelayInfo sse_decode_relay_info(SseDeserializer deserializer);
@@ -1971,6 +1978,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_protocol_support(
     ProtocolSupport self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_push_watch_status(
+    PushWatchStatus self,
     SseSerializer serializer,
   );
 

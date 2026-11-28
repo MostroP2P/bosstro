@@ -9,6 +9,7 @@ import 'package:bosstro/core/services/solver_key_service.dart';
 import 'package:bosstro/core/services/storage/app_storage.dart';
 import 'package:bosstro/core/startup_sequence.dart';
 import 'package:bosstro/features/nodes/providers/node_providers.dart';
+import 'package:bosstro/features/notifications/widgets/push_lifecycle.dart';
 import 'package:bosstro/features/settings/providers/language_provider.dart';
 import 'package:bosstro/features/solver_key/providers/solver_key_providers.dart';
 import 'package:bosstro/src/rust/api.dart' as rust;
@@ -103,8 +104,10 @@ Future<void> _startup(StartupSequence startup) async {
       ],
       // A solver with a key but no node yet (the app closed on the node
       // selector) picks one first.
-      child: BosstroApp(
-        initialLocation: AppRoute.home(hasNode: activeNode != null),
+      child: PushLifecycle(
+        child: BosstroApp(
+          initialLocation: AppRoute.home(hasNode: activeNode != null),
+        ),
       ),
     ),
   );

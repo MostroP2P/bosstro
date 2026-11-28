@@ -7,7 +7,7 @@ which every run that writes to a party goes through, refuses to start
 without it): the app asks the public push server to wake a
 party it wrote to, and a test's trade keys must not reach it. `off` sends no
 wake; `http://127.0.0.1:<port>` (or `localhost`) sends them to a server of
-your own. Only a debug build reads it (`rust/src/push.rs`).
+your own. Only a debug build reads it (`rust/src/push/mod.rs`).
 
 `take_against_local_mostrod_test.dart` drives the phase 4 screens (not a
 solver, a take from Pending, a Recover) through the real Rust core, against a

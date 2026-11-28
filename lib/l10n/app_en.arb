@@ -2459,5 +2459,93 @@
   "pushDisputesChannelName": "New disputes",
   "@pushDisputesChannelName": {
     "description": "The name of the notification channel for new disputes, in Android's settings of the app. Android string push_disputes_channel_name"
+  },
+  "settingsNotifications": "Notifications",
+  "@settingsNotifications": {
+    "description": "Settings row and the title of its screen: notifications of new disputes"
+  },
+  "notificationsOn": "On",
+  "@notificationsOn": {
+    "description": "Settings row value: notifications are turned on"
+  },
+  "notificationsOff": "Off",
+  "@notificationsOff": {
+    "description": "Settings row value: notifications are turned off"
+  },
+  "notificationsNewDisputes": "New disputes on this node",
+  "@notificationsNewDisputes": {
+    "description": "Notifications screen, the switch: ring when a dispute is opened on the active node"
+  },
+  "notificationsStatusRegistered": "Active for this node.",
+  "@notificationsStatusRegistered": {
+    "description": "Notifications screen, status: the notification server rings this phone for the active node"
+  },
+  "notificationsStatusWaiting": "Not active yet. Choose a node first.",
+  "@notificationsStatusWaiting": {
+    "description": "Notifications screen, status: turned on, and there is no active node yet"
+  },
+  "notificationsStatusTokenRefused": "The notification server refused this phone. Turn notifications off and on again.",
+  "@notificationsStatusTokenRefused": {
+    "description": "Notifications screen, status: the notification server refused this phone's token; turning them off and on asks Google for a new one"
+  },
+  "notificationsStatusNodeNotTrusted": "The notification server does not cover this node, so it will not ring.",
+  "@notificationsStatusNodeNotTrusted": {
+    "description": "Notifications screen, status: the notification server only rings for the nodes on its own list, and the active node is not one"
+  },
+  "notificationsStatusRateLimited": "The notification server asked to wait. Bosstro will try again by itself.",
+  "@notificationsStatusRateLimited": {
+    "description": "Notifications screen, status: the notification server answered 'too many requests'; the app retries"
+  },
+  "notificationsStatusServerUnavailable": "The notification server could not be reached. Bosstro will try again by itself.",
+  "@notificationsStatusServerUnavailable": {
+    "description": "Notifications screen, status: the notification server failed or there is no connection; the app retries"
+  },
+  "notificationsAbout": "Your phone rings when a dispute is opened on your node, even with Bosstro closed. The notification does not say which dispute: open Bosstro to see it.",
+  "@notificationsAbout": {
+    "description": "Notifications screen, what a notification is. It carries no content: the dispute is read from the relays when the app opens"
+  },
+  "notificationsPrivacy": "Google delivers the notification. The notification server sees your IP address and which node you follow, never your key.",
+  "@notificationsPrivacy": {
+    "description": "Notifications screen, what is shared with whom when notifications are on"
+  },
+  "notificationsLanguageNote": "The notification is shown in your phone's language.",
+  "@notificationsLanguageNote": {
+    "description": "Notifications screen: Android shows the notification in the system's language, not the one chosen in the app"
+  },
+  "notificationsBlockedTitle": "Notifications are blocked",
+  "@notificationsBlockedTitle": {
+    "description": "Dialog title: the OS refused the permission to show notifications"
+  },
+  "notificationsBlockedBody": "Allow notifications for Bosstro in your phone's settings, then turn them on here again.",
+  "@notificationsBlockedBody": {
+    "description": "Dialog body: how to allow notifications after refusing them"
+  },
+  "notificationsUnavailableTitle": "Notifications are not available",
+  "@notificationsUnavailableTitle": {
+    "description": "Dialog title: Google gave no device token"
+  },
+  "notificationsUnavailableBody": "They need Google Play Services and an internet connection. Check both and try again.",
+  "@notificationsUnavailableBody": {
+    "description": "Dialog body: why no token came, and what to check"
+  },
+  "pushOfferTitle": "Turn on notifications of new disputes?",
+  "@pushOfferTitle": {
+    "description": "Dialog shown once, after the solver picks a node for the first time: the question"
+  },
+  "pushOfferBody": "Your phone can ring when a dispute is opened on your node, even with Bosstro closed. Google delivers the notification, and the notification server sees your IP address and which node you follow. You can change this in Settings.",
+  "@pushOfferBody": {
+    "description": "Dialog body: what the notification does and what turning it on shares with whom"
+  },
+  "pushOfferAccept": "Turn on notifications",
+  "@pushOfferAccept": {
+    "description": "Dialog answer: turn notifications on (asks the OS for permission next)"
+  },
+  "pushOfferDecline": "Not now",
+  "@pushOfferDecline": {
+    "description": "Dialog answer: leave notifications off; nothing is asked again"
+  },
+  "notificationsStatusBlocked": "Notifications are blocked in your phone's settings. Allow them for Bosstro, or nothing will ring.",
+  "@notificationsStatusBlocked": {
+    "description": "Notifications screen, warning: the switch is on and the OS permission to show notifications was taken away afterwards, in the system's settings"
   }
 }

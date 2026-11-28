@@ -1961,4 +1961,83 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get pushDisputesChannelName => 'Nuove dispute';
+
+  @override
+  String get settingsNotifications => 'Notifiche';
+
+  @override
+  String get notificationsOn => 'Attive';
+
+  @override
+  String get notificationsOff => 'Disattivate';
+
+  @override
+  String get notificationsNewDisputes => 'Nuove dispute su questo nodo';
+
+  @override
+  String get notificationsStatusRegistered => 'Attive per questo nodo.';
+
+  @override
+  String get notificationsStatusWaiting =>
+      'Non ancora attive. Scegli prima un nodo.';
+
+  @override
+  String get notificationsStatusTokenRefused =>
+      'Il server delle notifiche ha rifiutato questo telefono. Disattiva le notifiche e riattivale.';
+
+  @override
+  String get notificationsStatusNodeNotTrusted =>
+      'Il server delle notifiche non copre questo nodo, quindi non suonerà.';
+
+  @override
+  String get notificationsStatusRateLimited =>
+      'Il server delle notifiche ha chiesto di attendere. Bosstro riproverà da solo.';
+
+  @override
+  String get notificationsStatusServerUnavailable =>
+      'Impossibile raggiungere il server delle notifiche. Bosstro riproverà da solo.';
+
+  @override
+  String get notificationsAbout =>
+      'Il telefono suona quando viene aperta una disputa sul tuo nodo, anche con Bosstro chiuso. La notifica non dice quale disputa: apri Bosstro per vederla.';
+
+  @override
+  String get notificationsPrivacy =>
+      'Google consegna la notifica. Il server delle notifiche vede il tuo indirizzo IP e quale nodo segui, mai la tua chiave.';
+
+  @override
+  String get notificationsLanguageNote =>
+      'La notifica è mostrata nella lingua del telefono.';
+
+  @override
+  String get notificationsBlockedTitle => 'Le notifiche sono bloccate';
+
+  @override
+  String get notificationsBlockedBody =>
+      'Consenti le notifiche di Bosstro nelle impostazioni del telefono, poi riattivale qui.';
+
+  @override
+  String get notificationsUnavailableTitle =>
+      'Le notifiche non sono disponibili';
+
+  @override
+  String get notificationsUnavailableBody =>
+      'Servono Google Play Services e una connessione a internet. Controlla entrambi e riprova.';
+
+  @override
+  String get pushOfferTitle => 'Attivare le notifiche delle nuove dispute?';
+
+  @override
+  String get pushOfferBody =>
+      'Il telefono può suonare quando viene aperta una disputa sul tuo nodo, anche con Bosstro chiuso. Google consegna la notifica e il server delle notifiche vede il tuo indirizzo IP e quale nodo segui. Puoi cambiarlo in Impostazioni.';
+
+  @override
+  String get pushOfferAccept => 'Attiva le notifiche';
+
+  @override
+  String get pushOfferDecline => 'Non ora';
+
+  @override
+  String get notificationsStatusBlocked =>
+      'Le notifiche sono bloccate nelle impostazioni del telefono. Consentile per Bosstro, altrimenti non suonerà nulla.';
 }

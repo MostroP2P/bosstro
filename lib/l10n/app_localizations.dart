@@ -3419,6 +3419,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New disputes'**
   String get pushDisputesChannelName;
+
+  /// Settings row and the title of its screen: notifications of new disputes
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsNotifications;
+
+  /// Settings row value: notifications are turned on
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get notificationsOn;
+
+  /// Settings row value: notifications are turned off
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get notificationsOff;
+
+  /// Notifications screen, the switch: ring when a dispute is opened on the active node
+  ///
+  /// In en, this message translates to:
+  /// **'New disputes on this node'**
+  String get notificationsNewDisputes;
+
+  /// Notifications screen, status: the notification server rings this phone for the active node
+  ///
+  /// In en, this message translates to:
+  /// **'Active for this node.'**
+  String get notificationsStatusRegistered;
+
+  /// Notifications screen, status: turned on, and there is no active node yet
+  ///
+  /// In en, this message translates to:
+  /// **'Not active yet. Choose a node first.'**
+  String get notificationsStatusWaiting;
+
+  /// Notifications screen, status: the notification server refused this phone's token; turning them off and on asks Google for a new one
+  ///
+  /// In en, this message translates to:
+  /// **'The notification server refused this phone. Turn notifications off and on again.'**
+  String get notificationsStatusTokenRefused;
+
+  /// Notifications screen, status: the notification server only rings for the nodes on its own list, and the active node is not one
+  ///
+  /// In en, this message translates to:
+  /// **'The notification server does not cover this node, so it will not ring.'**
+  String get notificationsStatusNodeNotTrusted;
+
+  /// Notifications screen, status: the notification server answered 'too many requests'; the app retries
+  ///
+  /// In en, this message translates to:
+  /// **'The notification server asked to wait. Bosstro will try again by itself.'**
+  String get notificationsStatusRateLimited;
+
+  /// Notifications screen, status: the notification server failed or there is no connection; the app retries
+  ///
+  /// In en, this message translates to:
+  /// **'The notification server could not be reached. Bosstro will try again by itself.'**
+  String get notificationsStatusServerUnavailable;
+
+  /// Notifications screen, what a notification is. It carries no content: the dispute is read from the relays when the app opens
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone rings when a dispute is opened on your node, even with Bosstro closed. The notification does not say which dispute: open Bosstro to see it.'**
+  String get notificationsAbout;
+
+  /// Notifications screen, what is shared with whom when notifications are on
+  ///
+  /// In en, this message translates to:
+  /// **'Google delivers the notification. The notification server sees your IP address and which node you follow, never your key.'**
+  String get notificationsPrivacy;
+
+  /// Notifications screen: Android shows the notification in the system's language, not the one chosen in the app
+  ///
+  /// In en, this message translates to:
+  /// **'The notification is shown in your phone\'s language.'**
+  String get notificationsLanguageNote;
+
+  /// Dialog title: the OS refused the permission to show notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are blocked'**
+  String get notificationsBlockedTitle;
+
+  /// Dialog body: how to allow notifications after refusing them
+  ///
+  /// In en, this message translates to:
+  /// **'Allow notifications for Bosstro in your phone\'s settings, then turn them on here again.'**
+  String get notificationsBlockedBody;
+
+  /// Dialog title: Google gave no device token
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are not available'**
+  String get notificationsUnavailableTitle;
+
+  /// Dialog body: why no token came, and what to check
+  ///
+  /// In en, this message translates to:
+  /// **'They need Google Play Services and an internet connection. Check both and try again.'**
+  String get notificationsUnavailableBody;
+
+  /// Dialog shown once, after the solver picks a node for the first time: the question
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notifications of new disputes?'**
+  String get pushOfferTitle;
+
+  /// Dialog body: what the notification does and what turning it on shares with whom
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone can ring when a dispute is opened on your node, even with Bosstro closed. Google delivers the notification, and the notification server sees your IP address and which node you follow. You can change this in Settings.'**
+  String get pushOfferBody;
+
+  /// Dialog answer: turn notifications on (asks the OS for permission next)
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notifications'**
+  String get pushOfferAccept;
+
+  /// Dialog answer: leave notifications off; nothing is asked again
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get pushOfferDecline;
+
+  /// Notifications screen, warning: the switch is on and the OS permission to show notifications was taken away afterwards, in the system's settings
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are blocked in your phone\'s settings. Allow them for Bosstro, or nothing will ring.'**
+  String get notificationsStatusBlocked;
 }
 
 class _AppLocalizationsDelegate

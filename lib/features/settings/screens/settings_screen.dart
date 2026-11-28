@@ -10,6 +10,7 @@ import 'package:bosstro/features/disputes/services/disputes_core.dart';
 import 'package:bosstro/features/nodes/models/node_display.dart';
 import 'package:bosstro/features/nodes/providers/node_providers.dart';
 import 'package:bosstro/features/nodes/providers/relay_providers.dart';
+import 'package:bosstro/features/notifications/providers/push_providers.dart';
 import 'package:bosstro/features/settings/models/languages.dart';
 import 'package:bosstro/features/settings/providers/language_provider.dart';
 import 'package:bosstro/features/settings/widgets/language_sheet.dart';
@@ -24,7 +25,8 @@ import 'package:bosstro/shared/widgets/order_data_card.dart';
 import 'package:bosstro/shared/widgets/redesign_app_bar.dart';
 import 'package:bosstro/shared/widgets/tab_app_bar.dart';
 
-/// Settings tab: the app's language and About; the active node and its relays,
+/// Settings tab: the app's language, the notifications of new disputes
+/// (where they can be received) and About; the active node and its relays,
 /// whether this key is a solver there and its permission (once the node's
 /// answers told); the solver key (npub, backup, and log out, the one
 /// destructive row, last); and the app's version as a quiet line at the
@@ -82,6 +84,17 @@ class SettingsScreen extends ConsumerWidget {
                       },
                       onTap: () => showLanguageSheet(context),
                     ),
+                    // Only where a push can be received (Android).
+                    if (ref.watch(canPushProvider))
+                      SettingsRow(
+                        icon: Icons.notifications_none_rounded,
+                        label: l10n.settingsNotifications,
+                        value:
+                            ref.watch(pushControllerProvider).enabled
+                                ? l10n.notificationsOn
+                                : l10n.notificationsOff,
+                        onTap: () => context.push(AppRoute.notifications),
+                      ),
                     SettingsRow(
                       icon: Icons.info_outline_rounded,
                       label: l10n.aboutScreenTitle,
