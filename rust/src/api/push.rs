@@ -110,12 +110,16 @@ pub async fn reconcile_push() -> PushWatchStatus {
 }
 
 async fn run() -> Outcome {
-    let inputs = Inputs {
-        node: crate::config::active_mostro_pubkey(),
-        has_key: SOLVER_SLOT.keys().await.is_some(),
+    // Read by the run once it has its turn, not here: this may wait behind
+    // another run, and the node or the key may change meanwhile.
+    let inputs = || async {
+        Inputs {
+            node: crate::config::active_mostro_pubkey(),
+            has_key: SOLVER_SLOT.keys().await.is_some(),
+        }
     };
     watcher()
-        .reconcile(crate::db::app_db::db(), &inputs, crate::rt::unix_now())
+        .reconcile_with(crate::db::app_db::db(), inputs, crate::rt::unix_now())
         .await
 }
 

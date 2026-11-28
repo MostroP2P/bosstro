@@ -331,8 +331,9 @@ python3 tool/launcher_icon/build_sources.py && dart run flutter_launcher_icons  
   signature. **The rule:** the active node is watched when notifications are on, the device has
   a token and a key is loaded. `reconcile` makes the server agree with it, one run at a time: a
   stored watch that is no longer the wanted one (another node or token, turned off, logged out)
-  joins the unwatches to do; those are tried, and one that fails **never holds back the new
-  watch**; the wanted watch is asked for when it is missing or a day old (the server keeps it 30
+  joins the unwatches to do, and so does a watch that was asked for and never answered (the
+  server may hold it); those are tried, and one that fails **never holds back the new
+  watch**; an unwatch of a node the solver came back to waits until that node's watch is taken; the wanted watch is asked for when it is missing or a day old (the server keeps it 30
   days). Answers are markers, never text: `200` registered; `400` token refused and `403` node
   not trusted, asked again only when the token or the node changes; `429` waits its
   `Retry-After`; anything else is tried again after 30 s, 2 min, 10 min, then every hour, while

@@ -116,6 +116,11 @@ struct Stored {
     watch: Option<Watch>,
     #[serde(default)]
     unwatch: Vec<PendingUnwatch>,
+    /// A watch that was asked for and whose fate is not known: the request
+    /// failed or the server answered an error, and it may hold the watch all
+    /// the same. Dropped like a watch when it stops being the wanted one.
+    #[serde(default)]
+    unconfirmed: Option<Target>,
     /// The solver was asked once whether they want notifications.
     #[serde(default)]
     offered: bool,
@@ -260,15 +265,37 @@ impl Watcher {
         Ok(())
     }
 
-    /// Make the server agree with the rule (see the module). `now` is Unix
-    /// seconds.
+    /// [`Self::reconcile_with`] for inputs already in hand.
+    #[cfg(test)]
     pub(crate) async fn reconcile(
         &self,
         db: Option<&impl Storage>,
         inputs: &Inputs,
         now: i64,
     ) -> Outcome {
+        self.reconcile_with(db, || async { inputs.clone() }, now)
+            .await
+    }
+
+    /// Make the server agree with the rule (see the module). `now` is Unix
+    /// seconds.
+    ///
+    /// `inputs` is asked once this run holds the lock, not before: runs
+    /// queue for it, and one that read the active node while it waited
+    /// could put back the node the solver has just left, after the run
+    /// that registered the new one.
+    pub(crate) async fn reconcile_with<F, Fut>(
+        &self,
+        db: Option<&impl Storage>,
+        inputs: F,
+        now: i64,
+    ) -> Outcome
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Inputs>,
+    {
         let mut inner = self.inner.lock().await;
+        let inputs = inputs().await;
         stored(&mut inner, db).await;
         let Inner {
             stored: Some(stored),
@@ -293,20 +320,25 @@ impl Watcher {
             *failures = 0;
         }
 
-        // 1. A watch that is not the wanted one is to be dropped.
-        if let Some(watch) = &stored.watch {
-            if Some(&watch.target) != wanted.as_ref() {
-                stored.unwatch.push(PendingUnwatch {
-                    target: watch.target.clone(),
-                    since: now,
-                });
-                stored.watch = None;
+        // 1. A watch that is not the wanted one is to be dropped: the one
+        // the server took, and one it may have taken.
+        let left_behind = [
+            stored.watch.as_ref().map(|watch| watch.target.clone()),
+            stored.unconfirmed.clone(),
+        ];
+        for target in left_behind.into_iter().flatten() {
+            if Some(&target) != wanted.as_ref()
+                && !stored.unwatch.iter().any(|pending| pending.target == target)
+            {
+                stored.unwatch.push(PendingUnwatch { target, since: now });
             }
         }
-        // Wanted again (the solver switched back): not to be dropped.
-        stored
-            .unwatch
-            .retain(|pending| Some(&pending.target) != wanted.as_ref());
+        if stored.watch.as_ref().map(|watch| &watch.target) != wanted.as_ref() {
+            stored.watch = None;
+        }
+        if stored.unconfirmed.as_ref() != wanted.as_ref() {
+            stored.unconfirmed = None;
+        }
         stored
             .unwatch
             .retain(|pending| now - pending.since < FORGET_UNWATCH_AFTER_SECS);
@@ -333,9 +365,18 @@ impl Watcher {
         let mut left = Vec::new();
         let mut pending = std::mem::take(&mut stored.unwatch).into_iter();
         for unwatch in pending.by_ref() {
+            // Wanted again (the solver switched back): not sent, and kept
+            // until the server takes the watch. Dropped before that, a
+            // watch that then failed would leave the server ringing this
+            // device for a node the solver went on to leave.
+            if Some(&unwatch.target) == wanted.as_ref() {
+                left.push(unwatch);
+                continue;
+            }
             match post(server, "unwatch", &unwatch.target).await {
-                // Done, or refused for good: nothing to try again.
-                Ok(reply) if reply.status == 200 || is_refusal(reply.status) => {}
+                // Done, or the server says the request itself is wrong
+                // (`400`): nothing to try again.
+                Ok(reply) if reply.status == 200 || reply.status == 400 => {}
                 Ok(reply) => {
                     log::info!("[push] unwatch not done: server returned {}", reply.status);
                     left.push(unwatch);
@@ -375,6 +416,8 @@ impl Watcher {
                                     target: target.clone(),
                                     registered_at: now,
                                 });
+                                stored.unconfirmed = None;
+                                stored.unwatch.retain(|pending| pending.target != *target);
                                 *hold = None;
                                 *failures = 0;
                                 Status::Registered
@@ -383,6 +426,7 @@ impl Watcher {
                                 // The server does not hold it, whatever
                                 // this app thought.
                                 stored.watch = None;
+                                stored.unconfirmed = None;
                                 *hold = Some(Hold {
                                     target: target.clone(),
                                     status,
@@ -393,6 +437,8 @@ impl Watcher {
                             Asked::Later { status, wait, failed } => {
                                 if failed {
                                     *failures += 1;
+                                    // It may have taken it all the same.
+                                    stored.unconfirmed = Some(target.clone());
                                 }
                                 *hold = Some(Hold {
                                     target: target.clone(),
@@ -418,7 +464,11 @@ impl Watcher {
             .as_ref()
             .and_then(|hold| hold.until)
             .map(|until| (until - now).max(1));
-        let unwatch_retry = (!stored.unwatch.is_empty()).then_some(UNWATCH_RETRY_SECS);
+        let unwatch_retry = stored
+            .unwatch
+            .iter()
+            .any(|pending| Some(&pending.target) != wanted.as_ref())
+            .then_some(UNWATCH_RETRY_SECS);
         Outcome {
             status,
             retry_in: match (watch_retry, unwatch_retry) {
@@ -442,12 +492,6 @@ fn idle(enabled: bool) -> Status {
 /// back by more than the longest wait does not hold the watch for ever.
 fn holds(until: i64, now: i64) -> bool {
     now < until && until - now <= MAX_RETRY_AFTER_SECS
-}
-
-/// A `4xx` that no retry changes. `429` asks to wait, and `408` is a
-/// timeout.
-fn is_refusal(status: u16) -> bool {
-    (400..500).contains(&status) && status != 429 && status != 408
 }
 
 /// What can be an FCM token: printable ASCII with no space, not empty and
@@ -493,8 +537,11 @@ async fn ask(server: &str, target: &Target, failures: usize) -> Asked {
                     .clamp(1, MAX_RETRY_AFTER_SECS),
                 failed: false,
             },
-            status if is_refusal(status) => {
-                log::info!("[push] watch refused: server returned {status}");
+            // The server's own word for a token FCM does not know. Any
+            // other `4xx` (a proxy's `401`, a `404` from a server without
+            // this endpoint) says nothing of the token and may pass.
+            400 => {
+                log::info!("[push] watch refused: the server did not take the token");
                 Asked::Refused(Status::TokenRefused)
             }
             status => failure(format!("server returned {status}")),
@@ -847,6 +894,157 @@ mod tests {
             asked(&seen)[3..],
             [call("unwatch", NODE_B, TOKEN), call("watch", NODE_A, TOKEN)]
         );
+    }
+
+    /// The leak a review found: A registered; B while the server fails; back
+    /// to A, whose watch fails too; then away again. The server still holds
+    /// the first watch of A and must be told to drop it.
+    #[tokio::test]
+    async fn a_watch_that_failed_after_switching_back_is_still_dropped_later() {
+        let (base, seen, watch, unwatch) = server(200, 200).await;
+        let db = store().await;
+        let watcher = ready(&base, &db).await;
+        watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+
+        // The server goes down: B is not watched, A is not unwatched.
+        watch.store(500, Ordering::SeqCst);
+        unwatch.store(500, Ordering::SeqCst);
+        watcher.reconcile(Some(&db), &on(NODE_B), NOW + 5).await;
+        // Back to A, still down: the watch of A is not confirmed.
+        let back = watcher.reconcile(Some(&db), &on(NODE_A), NOW + 10).await;
+        assert_eq!(back.status, Status::ServerUnavailable);
+
+        // The server is back, and the solver logs out.
+        watch.store(200, Ordering::SeqCst);
+        unwatch.store(200, Ordering::SeqCst);
+        seen.lock().unwrap().clear();
+        let logged_out = Inputs {
+            node: Some(NODE_A.to_string()),
+            has_key: false,
+        };
+        let out = watcher.reconcile(Some(&db), &logged_out, NOW + 15).await;
+
+        assert_eq!(out.retry_in, None);
+        let mut dropped = asked(&seen);
+        dropped.sort();
+        assert_eq!(
+            dropped,
+            vec![
+                call("unwatch", NODE_A, TOKEN),
+                call("unwatch", NODE_B, TOKEN)
+            ]
+        );
+    }
+
+    /// A request that failed here may have been stored there (a timeout on
+    /// the way back): the watch nobody confirmed is dropped all the same.
+    #[tokio::test]
+    async fn a_watch_whose_answer_never_came_is_dropped_when_the_node_changes() {
+        let (base, seen, watch, _unwatch) = server(500, 200).await;
+        let db = store().await;
+        let watcher = ready(&base, &db).await;
+        watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+
+        watch.store(200, Ordering::SeqCst);
+        watcher.reconcile(Some(&db), &on(NODE_B), NOW + 5).await;
+
+        assert_eq!(
+            asked(&seen)[1..],
+            [call("unwatch", NODE_A, TOKEN), call("watch", NODE_B, TOKEN)]
+        );
+        // And it survives a restart in between.
+        let (base, seen, watch, _unwatch) = server(500, 200).await;
+        let db = store().await;
+        ready(&base, &db)
+            .await
+            .reconcile(Some(&db), &on(NODE_A), NOW)
+            .await;
+        watch.store(200, Ordering::SeqCst);
+        let restarted = Watcher::to(&base);
+        restarted.reconcile(Some(&db), &on(NODE_B), NOW + 5).await;
+        assert_eq!(asked(&seen)[1], call("unwatch", NODE_A, TOKEN));
+    }
+
+    /// Only the server's `400` speaks of the token. Another `4xx` is tried
+    /// again like any failure, and does not ask the solver to toggle
+    /// anything.
+    #[tokio::test]
+    async fn a_4xx_that_is_not_the_servers_refusal_is_tried_again() {
+        for status in [401, 404, 408, 413] {
+            let (base, seen, watch, _unwatch) = server(status, 200).await;
+            let db = store().await;
+            let watcher = ready(&base, &db).await;
+
+            let outcome = watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+            assert_eq!(
+                outcome,
+                Outcome {
+                    status: Status::ServerUnavailable,
+                    retry_in: Some(30)
+                },
+                "{status}"
+            );
+
+            watch.store(200, Ordering::SeqCst);
+            let later = watcher.reconcile(Some(&db), &on(NODE_A), NOW + 30).await;
+            assert_eq!(later.status, Status::Registered, "{status}");
+            assert_eq!(seen.lock().unwrap().len(), 2, "{status}");
+        }
+    }
+
+    /// An unwatch answered with another `4xx` is kept, not taken as done.
+    #[tokio::test]
+    async fn an_unwatch_a_proxy_refuses_is_tried_again() {
+        let (base, seen, _watch, unwatch) = server(200, 404).await;
+        let db = store().await;
+        let watcher = ready(&base, &db).await;
+        watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+        let switched = watcher.reconcile(Some(&db), &on(NODE_B), NOW + 5).await;
+        assert_eq!(switched.retry_in, Some(UNWATCH_RETRY_SECS));
+
+        unwatch.store(200, Ordering::SeqCst);
+        watcher.reconcile(Some(&db), &on(NODE_B), NOW + 60).await;
+
+        assert_eq!(asked(&seen).last(), Some(&call("unwatch", NODE_A, TOKEN)));
+    }
+
+    /// The node and the key are read once the run has its turn: a run that
+    /// read them while it waited could undo the run before it.
+    #[tokio::test]
+    async fn what_is_wanted_is_read_once_the_run_holds_its_turn() {
+        let (base, seen) = serve(200).await;
+        let db = Arc::new(store().await);
+        let watcher = Arc::new(ready(&base, &db).await);
+        let read = Arc::new(std::sync::atomic::AtomicBool::new(false));
+
+        // Another run has the turn.
+        let turn = watcher.inner.lock().await;
+        let waiting = {
+            let (watcher, db, read) = (watcher.clone(), db.clone(), read.clone());
+            tokio::spawn(async move {
+                watcher
+                    .reconcile_with(
+                        Some(&*db),
+                        || async move {
+                            read.store(true, Ordering::SeqCst);
+                            // By now the solver is on B.
+                            on(NODE_B)
+                        },
+                        NOW,
+                    )
+                    .await
+            })
+        };
+        for _ in 0..10 {
+            tokio::task::yield_now().await;
+        }
+        assert!(!read.load(Ordering::SeqCst), "read while it waited");
+
+        drop(turn);
+        waiting.await.unwrap();
+
+        assert!(read.load(Ordering::SeqCst));
+        assert_eq!(asked(&seen), vec![call("watch", NODE_B, TOKEN)]);
     }
 
     #[tokio::test]
@@ -1272,15 +1470,13 @@ mod tests {
     }
 
     #[test]
-    fn a_wait_ends_and_a_refusal_is_told_from_a_failure() {
+    fn a_wait_ends_even_when_the_clock_is_set_back() {
         assert!(holds(NOW + 10, NOW));
         assert!(!holds(NOW, NOW));
         assert!(
             !holds(NOW + MAX_RETRY_AFTER_SECS + 1, NOW),
             "a clock set back does not hold the watch for ever"
         );
-        assert!(is_refusal(400) && is_refusal(404) && is_refusal(403));
-        assert!(!is_refusal(429) && !is_refusal(408) && !is_refusal(500) && !is_refusal(200));
     }
 
     #[tokio::test]
