@@ -25,10 +25,14 @@ final newDisputeTapsProvider = StateProvider<int>((ref) => 0);
 /// The notifications of new disputes, as Settings shows them.
 @immutable
 class PushState {
-  const PushState({this.enabled = false, this.status});
+  const PushState({this.enabled = false, this.status, this.blocked = false});
 
   /// The solver turned them on.
   final bool enabled;
+
+  /// They are on, and the OS does not let the app show them: the solver
+  /// took the permission away in the system's settings. Nothing rings.
+  final bool blocked;
 
   /// Where the watch on the push server stands; null until first read, and
   /// when it could not be read.
@@ -36,13 +40,17 @@ class PushState {
 
   @override
   bool operator ==(Object other) =>
-      other is PushState && other.enabled == enabled && other.status == status;
+      other is PushState &&
+      other.enabled == enabled &&
+      other.status == status &&
+      other.blocked == blocked;
 
   @override
-  int get hashCode => Object.hash(enabled, status);
+  int get hashCode => Object.hash(enabled, status, blocked);
 
   @override
-  String toString() => 'PushState(enabled: $enabled, status: $status)';
+  String toString() =>
+      'PushState(enabled: $enabled, status: $status, blocked: $blocked)';
 }
 
 /// How turning notifications on went.
@@ -105,29 +113,61 @@ class PushController extends Notifier<PushState> {
   /// At startup: read the switch, and when it is on, hand the core the
   /// device's token and follow its changes. When it is off the core is only
   /// asked to reconcile (an unwatch may still be owed).
-  Future<void> start() => _serial(() async {
-    if (!_canPush) return;
-    try {
-      final enabled = await _core.enabled();
-      if (!enabled) {
-        state = PushState(status: await _core.reconcile());
-        return;
+  ///
+  /// The switch shows on as soon as the core says so, and the token is
+  /// asked for outside the queue: Google may take its whole timeout, and
+  /// neither Settings nor a tap on the switch should wait for it.
+  Future<void> start() async {
+    final enabled = await _serial(() async {
+      if (!_canPush) return false;
+      try {
+        if (!await _core.enabled()) {
+          state = PushState(status: await _core.reconcile());
+          return false;
+        }
+        state = const PushState(enabled: true);
+        _followRefreshes();
+        // With the token the core kept, until Google answers.
+        state = PushState(
+          enabled: true,
+          blocked: await _blocked(),
+          status: await _core.reconcile(),
+        );
+        return true;
+      } catch (e) {
+        debugPrint('[push] not started: ${e.runtimeType}');
+        return state.enabled;
       }
-      _followRefreshes();
-      final token = await _token();
+    });
+    if (!enabled) return;
+    final token = await _token();
+    if (token != null) await _keep(token);
+  }
+
+  /// Hand the core a token Google gave, if notifications are still on.
+  Future<void> _keep(String token) => _serial(() async {
+    if (!state.enabled) return;
+    try {
       state = PushState(
         enabled: true,
-        // No token this time (no connection): the core works with the one
-        // it kept.
-        status:
-            token != null
-                ? await _core.setToken(token)
-                : await _core.reconcile(),
+        blocked: state.blocked,
+        status: await _core.setToken(token),
       );
     } catch (e) {
-      debugPrint('[push] not started: ${e.runtimeType}');
+      debugPrint('[push] token not kept: ${e.runtimeType}');
     }
   });
+
+  /// Whether the OS keeps the app from showing notifications. Unknown reads
+  /// as no: a warning is for what is known.
+  Future<bool> _blocked() async {
+    try {
+      return !await _messaging.permissionGranted();
+    } catch (e) {
+      debugPrint('[push] permission not read: ${e.runtimeType}');
+      return false;
+    }
+  }
 
   /// Whether to offer notifications now: where they can be received, at
   /// most once per install, and never while they are on.
@@ -167,7 +207,10 @@ class PushController extends Notifier<PushState> {
       state = PushState(enabled: true, status: await _core.setEnabled(true));
     } catch (e) {
       debugPrint('[push] not enabled: ${e.runtimeType}');
+      // Off, as it says: no token left with Google or with the core.
+      await _quietly(_messaging.deleteToken);
       await _quietly(() => _messaging.setAutoInit(false));
+      await _quietly(() => _core.setToken(null));
       return PushEnableResult.unavailable;
     }
     _followRefreshes();
@@ -205,9 +248,11 @@ class PushController extends Notifier<PushState> {
   Future<void> reconcile() => _serial(() async {
     if (!_canPush) return;
     try {
+      final status = await _core.reconcile();
       state = PushState(
         enabled: state.enabled,
-        status: await _core.reconcile(),
+        blocked: state.enabled && await _blocked(),
+        status: status,
       );
     } catch (e) {
       debugPrint('[push] not reconciled: ${e.runtimeType}');
@@ -224,14 +269,7 @@ class PushController extends Notifier<PushState> {
       },
     );
     _refreshes ??= _messaging.tokenRefreshes().listen(
-      (token) => _serial(() async {
-        if (!state.enabled) return;
-        try {
-          state = PushState(enabled: true, status: await _core.setToken(token));
-        } catch (e) {
-          debugPrint('[push] new token not kept: ${e.runtimeType}');
-        }
-      }),
+      _keep,
       onError: (Object e) {
         debugPrint('[push] token changes not followed: ${e.runtimeType}');
       },
@@ -240,13 +278,44 @@ class PushController extends Notifier<PushState> {
 
   /// The device's token, or null when Google gave none in time.
   Future<String?> _token() async {
+    final Future<String?> asked;
     try {
-      final token = await _messaging.getToken().timeout(tokenTimeout);
-      return (token == null || token.isEmpty) ? null : token;
+      asked = _messaging.getToken();
     } catch (e) {
       debugPrint('[push] no token: ${e.runtimeType}');
       return null;
     }
+    try {
+      final token = await asked.timeout(tokenTimeout);
+      return (token == null || token.isEmpty) ? null : token;
+    } on TimeoutException {
+      debugPrint('[push] no token: TimeoutException');
+      // The request is still out, and Google may answer it yet.
+      unawaited(_late(asked));
+      return null;
+    } catch (e) {
+      debugPrint('[push] no token: ${e.runtimeType}');
+      return null;
+    }
+  }
+
+  /// A token that came after its request was given up on. With
+  /// notifications on it is the device's token and goes to the core. With
+  /// them off (turning them on failed for want of it, or they were turned
+  /// off meanwhile) it must not stay with Google: off means no token.
+  Future<void> _late(Future<String?> asked) async {
+    String? token;
+    try {
+      token = await asked;
+    } catch (_) {
+      return;
+    }
+    if (token == null || token.isEmpty) return;
+    if (state.enabled) return _keep(token);
+    await _serial(() async {
+      if (state.enabled) return;
+      await _quietly(_messaging.deleteToken);
+    });
   }
 
   Future<void> _quietly(Future<void> Function() step) async {

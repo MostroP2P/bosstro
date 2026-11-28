@@ -12,6 +12,11 @@ abstract class PushMessaging {
   /// without asking below it). Whether it is granted.
   Future<bool> requestPermission();
 
+  /// Whether the OS lets the app show notifications now, without asking.
+  /// The solver can take the permission away later, in the system's
+  /// settings.
+  Future<bool> permissionGranted();
+
   /// The device's token, asking Google for one if there is none yet. Throws,
   /// or never answers, on a device without Google Play Services or without a
   /// connection.
@@ -58,6 +63,12 @@ class FirebasePushMessaging implements PushMessaging {
   @override
   Future<bool> requestPermission() async {
     final settings = await (await _messaging()).requestPermission();
+    return settings.authorizationStatus == AuthorizationStatus.authorized;
+  }
+
+  @override
+  Future<bool> permissionGranted() async {
+    final settings = await (await _messaging()).getNotificationSettings();
     return settings.authorizationStatus == AuthorizationStatus.authorized;
   }
 

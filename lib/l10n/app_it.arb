@@ -572,5 +572,6 @@
   "pushOfferTitle": "Attivare le notifiche delle nuove dispute?",
   "pushOfferBody": "Il telefono può suonare quando viene aperta una disputa sul tuo nodo, anche con Bosstro chiuso. Google consegna la notifica e il server delle notifiche vede il tuo indirizzo IP e quale nodo segui. Puoi cambiarlo in Impostazioni.",
   "pushOfferAccept": "Attiva le notifiche",
-  "pushOfferDecline": "Non ora"
+  "pushOfferDecline": "Non ora",
+  "notificationsStatusBlocked": "Le notifiche sono bloccate nelle impostazioni del telefono. Consentile per Bosstro, altrimenti non suonerà nulla."
 }

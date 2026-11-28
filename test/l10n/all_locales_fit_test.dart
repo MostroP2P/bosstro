@@ -469,6 +469,23 @@ void main() {
             'Notifications, ${status?.name ?? 'off'}',
           );
         }
+        // On, with the OS permission taken away.
+        {
+          final calls = PushCalls();
+          await _pump(
+            tester,
+            locale,
+            AppRoute.notifications,
+            push: FakePushCore(calls, isEnabled: true),
+            messaging: FakePushMessaging(calls)..permission = false,
+          );
+          await ProviderScope.containerOf(
+            tester.element(find.byType(BosstroApp)),
+          ).read(pushControllerProvider.notifier).start();
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.notificationsStatusBlocked), findsOneWidget);
+          await _fitsToTheEnd(tester, 'Notifications, blocked');
+        }
         // The offer after the first node of an install.
         await tester.pumpWidget(const SizedBox.shrink());
         setSurface(tester);

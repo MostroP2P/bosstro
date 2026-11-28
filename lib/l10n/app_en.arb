@@ -2543,5 +2543,9 @@
   "pushOfferDecline": "Not now",
   "@pushOfferDecline": {
     "description": "Dialog answer: leave notifications off; nothing is asked again"
+  },
+  "notificationsStatusBlocked": "Notifications are blocked in your phone's settings. Allow them for Bosstro, or nothing will ring.",
+  "@notificationsStatusBlocked": {
+    "description": "Notifications screen, warning: the switch is on and the OS permission to show notifications was taken away afterwards, in the system's settings"
   }
 }

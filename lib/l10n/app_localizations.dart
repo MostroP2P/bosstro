@@ -3545,6 +3545,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not now'**
   String get pushOfferDecline;
+
+  /// Notifications screen, warning: the switch is on and the OS permission to show notifications was taken away afterwards, in the system's settings
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are blocked in your phone\'s settings. Allow them for Bosstro, or nothing will ring.'**
+  String get notificationsStatusBlocked;
 }
 
 class _AppLocalizationsDelegate

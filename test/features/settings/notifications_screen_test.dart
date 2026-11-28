@@ -87,6 +87,23 @@ void main() {
         });
       }
 
+      testWidgets('blocked by the OS (${brightness.name})', (tester) async {
+        await _open(
+          tester,
+          _Push(enabled: true)..messaging.permission = false,
+          locale: const Locale('es'),
+          textScale: 2,
+          brightness: brightness,
+          width: 320,
+        );
+
+        expect(find.byType(WarningNote), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.drag(find.byType(ListView), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      });
+
       testWidgets('the dialogs (${brightness.name})', (tester) async {
         for (final arrange in <void Function(_Push)>[
           (push) => push.messaging.permission = false,
@@ -254,6 +271,39 @@ void main() {
 
     expect(push.calls.log, ['core.reconcile']);
     expect(find.byType(WarningNote), findsOneWidget);
+  });
+
+  testWidgets('on with the permission taken away warns, whatever the server '
+      'holds', (tester) async {
+    final push = _Push(enabled: true)..messaging.permission = false;
+    await _open(tester, push);
+
+    expect(find.byType(WarningNote), findsOneWidget);
+    expect(find.textContaining('blocked in your phone'), findsOneWidget);
+    expect(find.text('Active for this node.'), findsNothing);
+    expect(_switch(tester).value, isTrue);
+  });
+
+  testWidgets('a status that settles by itself is read again while on screen', (
+    tester,
+  ) async {
+    final push = _Push(
+      enabled: true,
+      status: PushWatchStatus.serverUnavailable,
+    );
+    await _open(tester, push);
+    expect(find.textContaining('could not be reached'), findsOneWidget);
+
+    // The core's own retry worked; nobody told the screen.
+    push.core.registered = PushWatchStatus.registered;
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Active for this node.'), findsOneWidget);
+    // And a settled status is not asked for again.
+    push.calls.log.clear();
+    await tester.pump(const Duration(seconds: 11));
+    expect(push.calls.log, isEmpty);
   });
 
   for (final (status, text, warns) in [

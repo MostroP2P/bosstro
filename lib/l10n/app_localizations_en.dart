@@ -2021,4 +2021,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pushOfferDecline => 'Not now';
+
+  @override
+  String get notificationsStatusBlocked =>
+      'Notifications are blocked in your phone\'s settings. Allow them for Bosstro, or nothing will ring.';
 }

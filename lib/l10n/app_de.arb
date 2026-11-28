@@ -572,5 +572,6 @@
   "pushOfferTitle": "Benachrichtigungen für neue Streitfälle einschalten?",
   "pushOfferBody": "Dein Telefon kann klingeln, wenn auf deinem Node ein Streitfall eröffnet wird, auch wenn Bosstro geschlossen ist. Google stellt die Benachrichtigung zu, und der Benachrichtigungsserver sieht deine IP-Adresse und welchem Node du folgst. Du kannst das in den Einstellungen ändern.",
   "pushOfferAccept": "Benachrichtigungen einschalten",
-  "pushOfferDecline": "Nicht jetzt"
+  "pushOfferDecline": "Nicht jetzt",
+  "notificationsStatusBlocked": "Benachrichtigungen sind in den Einstellungen deines Telefons blockiert. Erlaube sie für Bosstro, sonst klingelt nichts."
 }

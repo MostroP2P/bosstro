@@ -2034,4 +2034,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get pushOfferDecline => 'Pas maintenant';
+
+  @override
+  String get notificationsStatusBlocked =>
+      'Les notifications sont bloquées dans les réglages de votre téléphone. Autorisez-les pour Bosstro, sinon rien ne sonnera.';
 }

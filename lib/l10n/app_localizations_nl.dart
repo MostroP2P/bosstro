@@ -2038,4 +2038,8 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get pushOfferDecline => 'Niet nu';
+
+  @override
+  String get notificationsStatusBlocked =>
+      'Meldingen zijn geblokkeerd in de instellingen van je telefoon. Sta ze toe voor Bosstro, anders gaat er niets af.';
 }

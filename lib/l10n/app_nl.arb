@@ -572,5 +572,6 @@
   "pushOfferTitle": "Meldingen van nieuwe disputen aanzetten?",
   "pushOfferBody": "Je telefoon kan afgaan wanneer er een dispuut wordt geopend op je node, ook als Bosstro gesloten is. Google bezorgt de melding, en de meldingsserver ziet je IP-adres en welke node je volgt. Je kunt dit wijzigen in Instellingen.",
   "pushOfferAccept": "Meldingen aanzetten",
-  "pushOfferDecline": "Niet nu"
+  "pushOfferDecline": "Niet nu",
+  "notificationsStatusBlocked": "Meldingen zijn geblokkeerd in de instellingen van je telefoon. Sta ze toe voor Bosstro, anders gaat er niets af."
 }

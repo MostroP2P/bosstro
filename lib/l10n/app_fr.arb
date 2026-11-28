@@ -572,5 +572,6 @@
   "pushOfferTitle": "Activer les notifications des nouveaux litiges ?",
   "pushOfferBody": "Votre téléphone peut sonner quand un litige est ouvert sur votre nœud, même si Bosstro est fermé. Google achemine la notification, et le serveur de notifications voit votre adresse IP et le nœud que vous suivez. Vous pouvez changer cela dans Paramètres.",
   "pushOfferAccept": "Activer les notifications",
-  "pushOfferDecline": "Pas maintenant"
+  "pushOfferDecline": "Pas maintenant",
+  "notificationsStatusBlocked": "Les notifications sont bloquées dans les réglages de votre téléphone. Autorisez-les pour Bosstro, sinon rien ne sonnera."
 }

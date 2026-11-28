@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,9 +30,15 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  /// How often the status is read again while it is one that settles by
+  /// itself: the core retries on its own and tells nobody when it worked.
+  static const _recheck = Duration(seconds: 5);
+
   /// What the switch was last asked to become, while that is being done:
   /// it shows there at once and takes no other tap until it settles.
   bool? _turning;
+
+  Timer? _rechecks;
 
   @override
   void initState() {
@@ -39,6 +47,22 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ref.read(pushControllerProvider.notifier).reconcile();
     });
+    // Cheap: while the core is waiting it asks the server nothing.
+    _rechecks = Timer.periodic(_recheck, (_) {
+      final push = ref.read(pushControllerProvider);
+      final settles =
+          push.status == PushWatchStatus.rateLimited ||
+          push.status == PushWatchStatus.serverUnavailable;
+      if (_turning == null && push.enabled && settles) {
+        ref.read(pushControllerProvider.notifier).reconcile();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _rechecks?.cancel();
+    super.dispose();
   }
 
   Future<void> _set(bool on) async {
@@ -98,7 +122,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             ),
             if (_turning == null && push.enabled) ...[
               const SizedBox(height: 12),
-              _Status(status: push.status),
+              // Blocked by the OS comes first: with it nothing rings,
+              // whatever the server holds.
+              if (push.blocked)
+                WarningNote(text: l10n.notificationsStatusBlocked)
+              else
+                _Status(status: push.status),
             ],
             const SizedBox(height: 16),
             Text(l10n.notificationsAbout, style: note),

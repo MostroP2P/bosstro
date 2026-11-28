@@ -36,9 +36,17 @@ class FakePushMessaging implements PushMessaging {
     return permission;
   }
 
+  /// Not in the log, as following the taps: it asks nothing of Google.
+  @override
+  Future<bool> permissionGranted() async => permission;
+
+  /// When set, the token request answers when the test says, not at once.
+  Completer<String?>? tokenLater;
+
   @override
   Future<String?> getToken() {
     calls.log.add('getToken');
+    if (tokenLater case final later?) return later.future;
     if (tokenNeverAnswers) return Completer<String?>().future;
     if (tokenError != null) return Future.error(tokenError!);
     return Future.value(token);
@@ -83,9 +91,13 @@ class FakePushCore implements PushCore {
     return _status;
   }
 
+  /// When set, keeping a token fails with it. Forgetting one still works.
+  Object? setTokenError;
+
   @override
   Future<PushWatchStatus> setToken(String? token) async {
     calls.log.add('core.setToken($token)');
+    if (token != null && setTokenError != null) throw setTokenError!;
     return _status;
   }
 

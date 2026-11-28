@@ -150,6 +150,8 @@ void main() {
     expect(calls.log, [
       'core.enabled',
       'tokenRefreshes',
+      // With the token the core kept, before Google is asked.
+      'core.reconcile',
       'getToken',
       'core.setToken(token-1)',
     ]);
@@ -166,9 +168,137 @@ void main() {
 
     await c.read(pushControllerProvider.notifier).start();
 
-    expect(calls.log.last, 'core.reconcile');
+    expect(calls.log, [
+      'core.enabled',
+      'tokenRefreshes',
+      'core.reconcile',
+      'getToken',
+    ]);
+    expect(
+      c.read(pushControllerProvider),
+      const PushState(enabled: true, status: PushWatchStatus.registered),
+    );
+  });
+
+  testWidgets('at startup the switch shows on before Google answers', (
+    tester,
+  ) async {
+    core.isEnabled = true;
+    messaging.tokenLater = Completer();
+    final c = container();
+    final controller = c.read(pushControllerProvider.notifier);
+
+    final starting = controller.start();
+    await tester.pump();
+
+    // On, with the status of the token the core kept.
+    expect(
+      c.read(pushControllerProvider),
+      const PushState(enabled: true, status: PushWatchStatus.registered),
+    );
+    // And the switch answers meanwhile: turning it off does not wait for
+    // the token.
+    await controller.disable();
+    expect(core.isEnabled, isFalse);
+
+    messaging.tokenLater!.complete('token-1');
+    await starting;
+    expect(calls.log, isNot(contains('core.setToken(token-1)')));
+  });
+
+  test('a core that fails to take the token leaves the switch on', () async {
+    core.isEnabled = true;
+    core.setTokenError = StateError('storage');
+    final c = container();
+
+    await c.read(pushControllerProvider.notifier).start();
+
+    // Off here with the core on could not be turned off from the app.
     expect(c.read(pushControllerProvider).enabled, isTrue);
   });
+
+  test('on, with the permission taken away: it says blocked', () async {
+    core.isEnabled = true;
+    messaging.permission = false;
+    final c = container();
+    final controller = c.read(pushControllerProvider.notifier);
+
+    await controller.start();
+    expect(c.read(pushControllerProvider).blocked, isTrue);
+
+    // Given back in the system's settings: seen at the next look.
+    messaging.permission = true;
+    await controller.reconcile();
+    expect(c.read(pushControllerProvider).blocked, isFalse);
+  });
+
+  test('off is never blocked, and the permission is not even read', () async {
+    messaging.permission = false;
+    final c = container();
+    final controller = c.read(pushControllerProvider.notifier);
+
+    await controller.start();
+    await controller.reconcile();
+
+    expect(c.read(pushControllerProvider).blocked, isFalse);
+    expect(calls.log, ['core.enabled', 'core.reconcile', 'core.reconcile']);
+  });
+
+  testWidgets('a token that comes after "not available" is deleted', (
+    tester,
+  ) async {
+    messaging.tokenLater = Completer();
+    final c = container();
+
+    final enabling = c.read(pushControllerProvider.notifier).enable();
+    await tester.pump(PushController.tokenTimeout);
+    expect(await enabling, PushEnableResult.unavailable);
+    expect(calls.log, isNot(contains('deleteToken')));
+
+    // Google answers at last, with notifications off.
+    messaging.tokenLater!.complete('token-late');
+    await tester.pump();
+
+    expect(calls.log.last, 'deleteToken');
+    expect(calls.log, isNot(contains('core.setToken(token-late)')));
+    expect(core.isEnabled, isFalse);
+  });
+
+  testWidgets(
+    'a token that comes late with notifications on goes to the core',
+    (tester) async {
+      core.isEnabled = true;
+      messaging.tokenLater = Completer();
+      final c = container();
+
+      final starting = c.read(pushControllerProvider.notifier).start();
+      await tester.pump(PushController.tokenTimeout);
+      await starting;
+
+      messaging.tokenLater!.complete('token-late');
+      await tester.pump();
+
+      expect(calls.log.last, 'core.setToken(token-late)');
+      expect(calls.log, isNot(contains('deleteToken')));
+    },
+  );
+
+  test(
+    'a core that refuses the token when turning on leaves none behind',
+    () async {
+      core.setTokenError = StateError('storage');
+      final c = container();
+
+      final result = await c.read(pushControllerProvider.notifier).enable();
+
+      expect(result, PushEnableResult.unavailable);
+      expect(
+        calls.log,
+        containsAllInOrder(['deleteToken', 'setAutoInit(false)']),
+      );
+      expect(c.read(pushControllerProvider).enabled, isFalse);
+    },
+  );
 
   test('a token that replaces the device\'s goes to the core', () async {
     final c = container();
