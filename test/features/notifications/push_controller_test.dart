@@ -184,7 +184,7 @@ void main() {
     tester,
   ) async {
     core.isEnabled = true;
-    messaging.tokenLater = Completer();
+    final later = messaging.tokenLater = Completer<String?>();
     final c = container();
     final controller = c.read(pushControllerProvider.notifier);
 
@@ -204,7 +204,7 @@ void main() {
     // Google answers the request startup made, with notifications off by
     // now: the token it issued is deleted, not left behind.
     calls.log.clear();
-    messaging.tokenLater!.complete('token-1');
+    later.complete('token-1');
     await starting;
     expect(calls.log, ['deleteToken']);
   });
@@ -294,7 +294,7 @@ void main() {
   testWidgets('a token that comes after "not available" is deleted', (
     tester,
   ) async {
-    messaging.tokenLater = Completer();
+    final later = messaging.tokenLater = Completer<String?>();
     final c = container();
 
     final enabling = c.read(pushControllerProvider.notifier).enable();
@@ -303,7 +303,7 @@ void main() {
     expect(calls.log, isNot(contains('deleteToken')));
 
     // Google answers at last, with notifications off.
-    messaging.tokenLater!.complete('token-late');
+    later.complete('token-late');
     await tester.pump();
 
     expect(calls.log.last, 'deleteToken');
@@ -315,20 +315,49 @@ void main() {
     'a token that comes late with notifications on goes to the core',
     (tester) async {
       core.isEnabled = true;
-      messaging.tokenLater = Completer();
+      final later = messaging.tokenLater = Completer<String?>();
       final c = container();
 
       final starting = c.read(pushControllerProvider.notifier).start();
       await tester.pump(PushController.tokenTimeout);
       await starting;
 
-      messaging.tokenLater!.complete('token-late');
+      later.complete('token-late');
       await tester.pump();
 
       expect(calls.log.last, 'core.setToken(token-late)');
       expect(calls.log, isNot(contains('deleteToken')));
     },
   );
+
+  testWidgets('an answer to a request of before off and on is dropped', (
+    tester,
+  ) async {
+    // Startup's request is slow; the solver turns them off and on again.
+    core.isEnabled = true;
+    final later = messaging.tokenLater = Completer<String?>();
+    final c = container();
+    final controller = c.read(pushControllerProvider.notifier);
+    final starting = controller.start();
+    await tester.pump();
+    await controller.disable();
+    messaging.token = 'token-2';
+    expect(await controller.enable(), PushEnableResult.enabled);
+    expect(calls.log, contains('core.setToken(token-2)'));
+    calls.log.clear();
+
+    // The first request answers now, with the token the turning-off
+    // deleted: it must not take the place of the one that works.
+    later.complete('token-1');
+    await starting;
+    await tester.pump();
+
+    expect(calls.log, isEmpty);
+    expect(
+      c.read(pushControllerProvider),
+      const PushState(enabled: true, status: PushWatchStatus.registered),
+    );
+  });
 
   test(
     'a core that refuses the token when turning on leaves none behind',

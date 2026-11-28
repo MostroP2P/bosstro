@@ -88,6 +88,11 @@ class PushController extends Notifier<PushState> {
   PushMessaging get _messaging => ref.read(pushMessagingProvider);
   bool get _canPush => ref.read(canPushProvider);
 
+  /// Which turning-on a token request belongs to: every turning-off starts
+  /// another. A request can answer after the solver turned notifications
+  /// off and on again, and its token is then not the device's any more.
+  int _turn = 0;
+
   /// Whether the switch was read from the core. A read that failed at
   /// startup is made again at the next look.
   bool _started = false;
@@ -147,8 +152,9 @@ class PushController extends Notifier<PushState> {
       }
     });
     if (!enabled) return;
-    final token = await _token();
-    if (token != null) await _arrived(token);
+    final turn = _turn;
+    final token = await _token(turn);
+    if (token != null) await _arrived(token, turn);
   }
 
   /// What was stored was lost while notifications were on: the core has
@@ -162,13 +168,20 @@ class PushController extends Notifier<PushState> {
 
   /// Where every token Google gives ends up, whenever it comes: a request
   /// may answer long after it was made, and the switch may have changed
-  /// meanwhile. On, it is the device's token and goes to the core. Off, it
-  /// must not stay with Google: off means no token.
-  Future<void> _arrived(String token) => _serial(() async {
+  /// meanwhile. [turn] is the turning-on the request was made in.
+  ///
+  /// - Off: it must not stay with Google. Off means no token.
+  /// - On again since the request ([turn] is an older one): dropped. The
+  ///   turning-off in between deleted that token, and the core has the one
+  ///   of this turning-on; handing it the old one would have the push
+  ///   server swap a token that works for one Google no longer knows.
+  /// - On, same turn: it is the device's token and goes to the core.
+  Future<void> _arrived(String token, int turn) => _serial(() async {
     if (!state.enabled) {
       await _quietly(_messaging.deleteToken);
       return;
     }
+    if (turn != _turn) return;
     try {
       state = PushState(
         enabled: true,
@@ -219,7 +232,7 @@ class PushController extends Notifier<PushState> {
       debugPrint('[push] not enabled: ${e.runtimeType}');
       return PushEnableResult.unavailable;
     }
-    final token = await _token();
+    final token = await _token(_turn);
     if (token == null) {
       await _quietly(() => _messaging.setAutoInit(false));
       return PushEnableResult.unavailable;
@@ -250,6 +263,8 @@ class PushController extends Notifier<PushState> {
       debugPrint('[push] not disabled in the core: ${e.runtimeType}');
       return;
     }
+    // Token requests still out belong to the turning-on that ends here.
+    _turn++;
     // Not awaited: nothing here depends on the cancellation having ended.
     unawaited(_refreshes?.cancel());
     _refreshes = null;
@@ -298,7 +313,7 @@ class PushController extends Notifier<PushState> {
       },
     );
     _refreshes ??= _messaging.tokenRefreshes().listen(
-      _arrived,
+      (token) => _arrived(token, _turn),
       onError: (Object e) {
         debugPrint('[push] token changes not followed: ${e.runtimeType}');
       },
@@ -306,7 +321,7 @@ class PushController extends Notifier<PushState> {
   }
 
   /// The device's token, or null when Google gave none in time.
-  Future<String?> _token() async {
+  Future<String?> _token(int turn) async {
     final Future<String?> asked;
     try {
       asked = _messaging.getToken();
@@ -320,7 +335,7 @@ class PushController extends Notifier<PushState> {
     } on TimeoutException {
       debugPrint('[push] no token: TimeoutException');
       // The request is still out, and Google may answer it yet.
-      unawaited(_late(asked));
+      unawaited(_late(asked, turn));
       return null;
     } catch (e) {
       debugPrint('[push] no token: ${e.runtimeType}');
@@ -329,7 +344,7 @@ class PushController extends Notifier<PushState> {
   }
 
   /// A token that came after its request was given up on.
-  Future<void> _late(Future<String?> asked) async {
+  Future<void> _late(Future<String?> asked, int turn) async {
     String? token;
     try {
       token = await asked;
@@ -337,7 +352,7 @@ class PushController extends Notifier<PushState> {
       return;
     }
     if (token == null || token.isEmpty) return;
-    await _arrived(token);
+    await _arrived(token, turn);
   }
 
   Future<void> _quietly(Future<void> Function() step) async {

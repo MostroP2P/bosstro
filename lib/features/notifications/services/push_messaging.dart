@@ -56,7 +56,15 @@ class FirebasePushMessaging implements PushMessaging {
   /// Firebase's Dart side, started at the first use. The options come from
   /// `android/app/google-services.json`.
   Future<FirebaseMessaging> _messaging() async {
-    await (_app ??= Firebase.initializeApp());
+    final app = _app ??= Firebase.initializeApp();
+    try {
+      await app;
+    } catch (_) {
+      // Not kept: a start that failed once would fail every call until the
+      // app is restarted. The next call starts it again.
+      if (identical(_app, app)) _app = null;
+      rethrow;
+    }
     return FirebaseMessaging.instance;
   }
 

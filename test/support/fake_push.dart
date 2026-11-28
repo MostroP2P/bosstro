@@ -40,13 +40,17 @@ class FakePushMessaging implements PushMessaging {
   @override
   Future<bool> permissionGranted() async => permission;
 
-  /// When set, the token request answers when the test says, not at once.
+  /// When set, the next token request answers when the test says, not at
+  /// once. The requests after it answer as usual.
   Completer<String?>? tokenLater;
 
   @override
   Future<String?> getToken() {
     calls.log.add('getToken');
-    if (tokenLater case final later?) return later.future;
+    if (tokenLater case final later?) {
+      tokenLater = null;
+      return later.future;
+    }
     if (tokenNeverAnswers) return Completer<String?>().future;
     if (tokenError != null) return Future.error(tokenError!);
     return Future.value(token);
