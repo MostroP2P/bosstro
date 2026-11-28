@@ -10,7 +10,16 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`, `fmt`, `from`
 
 /// Whether the solver turned notifications on. Off until they do.
+///
+/// **Errors**: `StorageUnavailable`, when what is stored could not be read
+/// this time. It is not "off": ask again.
 Future<bool> pushEnabled() => RustLib.instance.api.crateApiPushPushEnabled();
+
+/// Whether what was stored about notifications was found unreadable and
+/// started over, said once. The switch then reads off while Google still
+/// holds the device's token: Dart deletes it.
+Future<bool> takePushStateLost() =>
+    RustLib.instance.api.crateApiPushTakePushStateLost();
 
 /// Whether to offer the solver notifications now. Yes at most once in the
 /// life of the install, and never when they are already on: asking marks the
@@ -21,6 +30,8 @@ Future<bool> takePushOffer() =>
 /// Turn the notifications of new disputes on or off, and bring the push
 /// server in step: turning them off drops the watch. Dart deletes the
 /// device's token itself and says so with [`set_push_token`].
+///
+/// **Errors**: `StorageUnavailable`, with nothing changed.
 Future<PushWatchStatus> setPushEnabled({required bool enabled}) =>
     RustLib.instance.api.crateApiPushSetPushEnabled(enabled: enabled);
 
@@ -28,7 +39,8 @@ Future<PushWatchStatus> setPushEnabled({required bool enabled}) =>
 /// forget it with `None` once Dart deleted it, and bring the push server in
 /// step.
 ///
-/// **Errors**: `InvalidToken`, for what cannot be an FCM token.
+/// **Errors**: `InvalidToken`, for what cannot be an FCM token;
+/// `StorageUnavailable`, with nothing changed.
 Future<PushWatchStatus> setPushToken({String? token}) =>
     RustLib.instance.api.crateApiPushSetPushToken(token: token);
 
@@ -38,6 +50,12 @@ Future<PushWatchStatus> setPushToken({String? token}) =>
 ///
 /// A run that has to be tried again (the server down, a rate limit, an
 /// unwatch that failed) is, by itself, while the process lives.
+///
+/// Call it once a key change has settled, never in the middle of one: this
+/// run takes "no key" for a logout and drops the watch.
+///
+/// **Errors**: `StorageUnavailable`, when what is stored could not be read:
+/// nothing was asked of the server. It is tried again by itself.
 Future<PushWatchStatus> reconcilePush() =>
     RustLib.instance.api.crateApiPushReconcilePush();
 

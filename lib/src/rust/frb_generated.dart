@@ -78,7 +78,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -423808982;
+  int get rustContentHash => -523968457;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -267,6 +267,8 @@ abstract class RustLibApi extends BaseApi {
   Future<TakeResult> crateApiTakeTakeDispute({required String disputeId});
 
   Future<bool> crateApiPushTakePushOffer();
+
+  Future<bool> crateApiPushTakePushStateLost();
 
   Future<bool> crateApiSolverUnloadSolverKey();
 
@@ -1508,7 +1510,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_bool,
-          decodeErrorData: null,
+          decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiPushPushEnabledConstMeta,
         argValues: [],
@@ -1568,7 +1570,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_push_watch_status,
-          decodeErrorData: null,
+          decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiPushReconcilePushConstMeta,
         argValues: [],
@@ -1977,7 +1979,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_push_watch_status,
-          decodeErrorData: null,
+          decodeErrorData: sse_decode_AnyhowException,
         ),
         constMeta: kCrateApiPushSetPushEnabledConstMeta,
         argValues: [enabled],
@@ -2208,7 +2210,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "take_push_offer", argNames: []);
 
   @override
-  Future<bool> crateApiSolverUnloadSolverKey() {
+  Future<bool> crateApiPushTakePushStateLost() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -2217,6 +2219,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             generalizedFrbRustBinding,
             serializer,
             funcId: 65,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPushTakePushStateLostConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPushTakePushStateLostConstMeta =>
+      const TaskConstMeta(debugName: "take_push_state_lost", argNames: []);
+
+  @override
+  Future<bool> crateApiSolverUnloadSolverKey() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 66,
             port: port_,
           );
         },

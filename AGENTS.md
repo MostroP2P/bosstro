@@ -337,7 +337,10 @@ python3 tool/launcher_icon/build_sources.py && dart run flutter_launcher_icons  
   days). Answers are markers, never text: `200` registered; `400` token refused and `403` node
   not trusted, asked again only when the token or the node changes; `429` waits its
   `Retry-After`; anything else is tried again after 30 s, 2 min, 10 min, then every hour, while
-  the process lives. A renewal that fails leaves the watch registered. Stored: the switch, the
+  the process lives. A renewal that fails leaves the watch registered, until it is as old as
+  the server keeps it. The retry task never takes "no key" for a logout (a key being replaced
+  is unloaded first): only a run Dart asks for drops a watch for want of a key. What is stored
+  and could not be read is never taken for empty: the run does nothing and reads again. Stored: the switch, the
   token, the watch and the unwatches to do (`push_watch`); what makes a run wait is in memory
   only. Dart asks for a reconcile at startup, on resume and when the node, the key, the token or
   the switch changes (`PushLifecycle`, `PushController`); a key change is seen there once it

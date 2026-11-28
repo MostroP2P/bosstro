@@ -34,15 +34,43 @@ use serde::{Deserialize, Serialize};
 
 use super::http_client;
 use crate::db::{settings_keys, Storage};
+
+/// Where the watch is kept: one value of the settings store. A trait of its
+/// own so a test can make the read fail.
+#[allow(async_fn_in_trait)]
+pub(crate) trait WatchStore {
+    async fn read(&self) -> anyhow::Result<Option<String>>;
+    async fn write(&self, json: &str) -> anyhow::Result<()>;
+}
+
+impl<T: Storage> WatchStore for T {
+    async fn read(&self) -> anyhow::Result<Option<String>> {
+        self.get_setting(settings_keys::PUSH_WATCH).await
+    }
+
+    async fn write(&self, json: &str) -> anyhow::Result<()> {
+        self.set_setting(settings_keys::PUSH_WATCH, json).await
+    }
+}
 use crate::rt::time::Duration;
 
 /// A watch older than this is asked for again, far inside the 30 days the
 /// server keeps it.
 const RENEW_AFTER_SECS: i64 = 86_400;
 
+/// How long the server keeps a watch from the last time it was asked for.
+const SERVER_KEEPS_SECS: i64 = 30 * 86_400;
+
 /// An unwatch that could not be done for this long is dropped: the server
 /// has let the watch lapse by then.
-const FORGET_UNWATCH_AFTER_SECS: i64 = 30 * 86_400;
+const FORGET_UNWATCH_AFTER_SECS: i64 = SERVER_KEEPS_SECS;
+
+/// How long a run that will not decide for want of a key waits before it
+/// looks again ([`Inputs::key_settled`]).
+const KEY_WAIT_SECS: i64 = 60;
+
+/// How long until a run that could not read what is stored is tried again.
+pub(crate) const STORAGE_RETRY_SECS: i64 = 30;
 
 /// More unwatches to do than this and the oldest are dropped. Each is a
 /// request per run.
@@ -154,6 +182,14 @@ pub(crate) struct Inputs {
     pub(crate) node: Option<String>,
     /// Whether a solver key is loaded.
     pub(crate) has_key: bool,
+    /// Whether "no key" can be taken at its word. Replacing a key unloads
+    /// the old one before it loads the new one, and a run of the retry task
+    /// may fall in between: it would drop a watch the solver still wants,
+    /// and asking for it again counts as a new watch on the server. So only
+    /// a run asked for by Dart, which asks once a key change has settled,
+    /// drops a watch for want of a key. A run that may not leaves it and
+    /// looks again later.
+    pub(crate) key_settled: bool,
 }
 
 /// What one run found.
@@ -181,6 +217,11 @@ struct Inner {
     hold: Option<Hold>,
     /// Failures that may pass, in a row.
     failures: usize,
+    /// What was stored could not be understood and was started over: the
+    /// watches and the token it named are forgotten here, and may live on
+    /// with the server and with Google. Told to Dart once
+    /// ([`Watcher::take_lost`]).
+    lost: bool,
 }
 
 /// Keeps one push server's watch in step with the rule.
@@ -214,17 +255,34 @@ impl Watcher {
     }
 
     /// Whether the solver has notifications on.
-    pub(crate) async fn enabled(&self, db: Option<&impl Storage>) -> bool {
+    ///
+    /// **Errors**: `StorageUnavailable`, when what is stored could not be
+    /// read. Nothing is assumed then: the next call reads again.
+    pub(crate) async fn enabled(&self, db: Option<&impl WatchStore>) -> anyhow::Result<bool> {
         let mut inner = self.inner.lock().await;
-        stored(&mut inner, db).await.enabled
+        Ok(stored(&mut inner, db).await?.enabled)
+    }
+
+    /// Whether what was stored was found unreadable and started over, said
+    /// once: Dart then deletes the device's token, which it cannot know to
+    /// do from a switch that now reads off.
+    pub(crate) async fn take_lost(&self, db: Option<&impl WatchStore>) -> bool {
+        let mut inner = self.inner.lock().await;
+        if stored(&mut inner, db).await.is_err() {
+            return false;
+        }
+        std::mem::take(&mut inner.lost)
     }
 
     /// Whether to offer notifications to the solver now, which is said yes
     /// to once: they are off and were never offered. The offer is marked as
     /// made here, before it shows, so it cannot show twice.
-    pub(crate) async fn take_offer(&self, db: Option<&impl Storage>) -> bool {
+    pub(crate) async fn take_offer(&self, db: Option<&impl WatchStore>) -> bool {
         let mut inner = self.inner.lock().await;
-        let stored = stored(&mut inner, db).await;
+        // Unread: not offered now, and not marked as offered either.
+        let Ok(stored) = stored(&mut inner, db).await else {
+            return false;
+        };
         if stored.offered {
             return false;
         }
@@ -235,29 +293,37 @@ impl Watcher {
 
     /// Turn notifications on or off. The server learns of it at the next
     /// [`Self::reconcile`].
-    pub(crate) async fn set_enabled(&self, db: Option<&impl Storage>, enabled: bool) {
+    ///
+    /// **Errors**: `StorageUnavailable`; nothing is changed or written.
+    pub(crate) async fn set_enabled(
+        &self,
+        db: Option<&impl WatchStore>,
+        enabled: bool,
+    ) -> anyhow::Result<()> {
         let mut inner = self.inner.lock().await;
-        let stored = stored(&mut inner, db).await;
+        let stored = stored(&mut inner, db).await?;
         if stored.enabled != enabled {
             stored.enabled = enabled;
             save(db, stored).await;
         }
+        Ok(())
     }
 
     /// Keep the device's token, or forget it with `None` (Dart deleted it).
     /// The server learns of it at the next [`Self::reconcile`].
     ///
-    /// **Errors**: `InvalidToken`, for what cannot be an FCM token.
+    /// **Errors**: `InvalidToken`, for what cannot be an FCM token;
+    /// `StorageUnavailable`, with nothing changed or written.
     pub(crate) async fn set_token(
         &self,
-        db: Option<&impl Storage>,
+        db: Option<&impl WatchStore>,
         token: Option<String>,
     ) -> anyhow::Result<()> {
         if token.as_deref().is_some_and(|token| !is_token(token)) {
             anyhow::bail!("InvalidToken");
         }
         let mut inner = self.inner.lock().await;
-        let stored = stored(&mut inner, db).await;
+        let stored = stored(&mut inner, db).await?;
         if stored.token != token {
             stored.token = token;
             save(db, stored).await;
@@ -269,12 +335,13 @@ impl Watcher {
     #[cfg(test)]
     pub(crate) async fn reconcile(
         &self,
-        db: Option<&impl Storage>,
+        db: Option<&impl WatchStore>,
         inputs: &Inputs,
         now: i64,
     ) -> Outcome {
         self.reconcile_with(db, || async { inputs.clone() }, now)
             .await
+            .expect("what is stored is read")
     }
 
     /// Make the server agree with the rule (see the module). `now` is Unix
@@ -284,28 +351,62 @@ impl Watcher {
     /// queue for it, and one that read the active node while it waited
     /// could put back the node the solver has just left, after the run
     /// that registered the new one.
+    ///
+    /// **Errors**: `StorageUnavailable`, when what is stored could not be
+    /// read: nothing is asked of the server and nothing is written, since
+    /// what it holds for this device is not known.
     pub(crate) async fn reconcile_with<F, Fut>(
         &self,
-        db: Option<&impl Storage>,
+        db: Option<&impl WatchStore>,
         inputs: F,
         now: i64,
-    ) -> Outcome
+    ) -> anyhow::Result<Outcome>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Inputs>,
     {
         let mut inner = self.inner.lock().await;
         let inputs = inputs().await;
-        stored(&mut inner, db).await;
+        stored(&mut inner, db).await?;
         let Inner {
             stored: Some(stored),
             hold,
             failures,
+            ..
         } = &mut *inner
         else {
             unreachable!("stored() fills it");
         };
         let before = stored.clone();
+
+        // The server has dropped a watch this old by itself: there is none
+        // to renew or to unwatch, and asking for it is asking for a new
+        // one, whose failure must not read as a watch that still stands.
+        if stored
+            .watch
+            .as_ref()
+            .is_some_and(|watch| now - watch.registered_at >= SERVER_KEEPS_SECS)
+        {
+            stored.watch = None;
+        }
+
+        // No key, on a run that cannot tell a logout from a key being
+        // replaced: the watch is left as it is, for a run that can.
+        if !inputs.has_key
+            && !inputs.key_settled
+            && (stored.watch.is_some() || stored.unconfirmed.is_some())
+        {
+            if *stored != before {
+                save(db, stored).await;
+            }
+            return Ok(Outcome {
+                status: match stored.watch {
+                    Some(_) => Status::Registered,
+                    None => idle(stored.enabled),
+                },
+                retry_in: Some(KEY_WAIT_SECS),
+            });
+        }
 
         let wanted = match (&stored.token, &inputs.node) {
             (Some(token), Some(node)) if stored.enabled && inputs.has_key => Some(Target {
@@ -351,13 +452,13 @@ impl Watcher {
             if *stored != before {
                 save(db, stored).await;
             }
-            return Outcome {
+            return Ok(Outcome {
                 status: match wanted {
                     Some(_) => Status::ServerUnavailable,
                     None => idle(stored.enabled),
                 },
                 retry_in: None,
-            };
+            });
         };
 
         // 2. The unwatches. The first that cannot reach the server ends the
@@ -469,13 +570,13 @@ impl Watcher {
             .iter()
             .any(|pending| Some(&pending.target) != wanted.as_ref())
             .then_some(UNWATCH_RETRY_SECS);
-        Outcome {
+        Ok(Outcome {
             status,
             retry_in: match (watch_retry, unwatch_retry) {
                 (Some(a), Some(b)) => Some(a.min(b)),
                 (a, b) => a.or(b),
             },
-        }
+        })
     }
 }
 
@@ -585,32 +686,46 @@ async fn post(server: &str, action: &str, target: &Target) -> anyhow::Result<Rep
     })
 }
 
-/// What is stored, read once. Without storage, or when what is stored
-/// cannot be read, it starts empty: notifications off.
-async fn stored<'a>(inner: &'a mut Inner, db: Option<&impl Storage>) -> &'a mut Stored {
+/// What is stored, read once it was read well.
+///
+/// - Without storage, or with nothing stored, it starts empty: off.
+/// - Stored and not understood (not this JSON): it starts over, and says
+///   so ([`Inner::lost`]).
+/// - **Not read** (the storage failed): `StorageUnavailable`, and nothing
+///   is kept, so the next call reads again. Taking it for empty would show
+///   the switch off, forget every watch the server holds, and let the next
+///   write put that in place of what is really stored.
+async fn stored<'a>(
+    inner: &'a mut Inner,
+    db: Option<&impl WatchStore>,
+) -> anyhow::Result<&'a mut Stored> {
     if inner.stored.is_none() {
         let read = match db {
-            Some(db) => match db.get_setting(settings_keys::PUSH_WATCH).await {
-                Ok(Some(json)) => serde_json::from_str(&json).unwrap_or_else(|_| {
-                    log::warn!("[push] the stored watch is not readable; starting over");
-                    Stored::default()
-                }),
+            Some(db) => match db.read().await {
+                Ok(Some(json)) => match serde_json::from_str(&json) {
+                    Ok(stored) => stored,
+                    Err(_) => {
+                        log::warn!("[push] the stored watch is not readable; starting over");
+                        inner.lost = true;
+                        Stored::default()
+                    }
+                },
                 Ok(None) => Stored::default(),
                 Err(e) => {
                     log::warn!("[push] the stored watch was not read: {e}");
-                    Stored::default()
+                    anyhow::bail!("StorageUnavailable");
                 }
             },
             None => Stored::default(),
         };
         inner.stored = Some(read);
     }
-    inner.stored.as_mut().expect("just filled")
+    Ok(inner.stored.as_mut().expect("just filled"))
 }
 
 /// Best effort, as the other settings: a failed write is logged and the
 /// session goes on from memory.
-async fn save(db: Option<&impl Storage>, stored: &Stored) {
+async fn save(db: Option<&impl WatchStore>, stored: &Stored) {
     let Some(db) = db else { return };
     let json = match serde_json::to_string(stored) {
         Ok(json) => json,
@@ -619,7 +734,7 @@ async fn save(db: Option<&impl Storage>, stored: &Stored) {
             return;
         }
     };
-    if let Err(e) = db.set_setting(settings_keys::PUSH_WATCH, &json).await {
+    if let Err(e) = db.write(&json).await {
         log::warn!("[push] the watch was not stored: {e}");
     }
 }
@@ -646,13 +761,14 @@ mod tests {
         Inputs {
             node: Some(node.to_string()),
             has_key: true,
+            key_settled: true,
         }
     }
 
     /// A watcher with notifications on and a token.
     async fn ready(server: &str, db: &SqliteStorage) -> Watcher {
         let watcher = Watcher::to(server);
-        watcher.set_enabled(Some(db), true).await;
+        watcher.set_enabled(Some(db), true).await.unwrap();
         watcher
             .set_token(Some(db), Some(TOKEN.to_string()))
             .await
@@ -737,7 +853,7 @@ mod tests {
         assert_eq!(off.status, Status::Off);
 
         // On, with no token yet.
-        watcher.set_enabled(Some(&db), true).await;
+        watcher.set_enabled(Some(&db), true).await.unwrap();
         let no_token = watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
         assert_eq!(no_token.status, Status::Waiting);
 
@@ -750,10 +866,12 @@ mod tests {
             Inputs {
                 node: None,
                 has_key: true,
+                key_settled: true,
             },
             Inputs {
                 node: Some(NODE_A.to_string()),
                 has_key: false,
+                key_settled: true,
             },
         ] {
             let outcome = watcher.reconcile(Some(&db), &inputs, NOW).await;
@@ -797,7 +915,7 @@ mod tests {
 
         // Another process, the same storage.
         let restarted = Watcher::to(&base);
-        assert!(restarted.enabled(Some(&db)).await);
+        assert!(restarted.enabled(Some(&db)).await.unwrap());
         let outcome = restarted
             .reconcile(Some(&db), &on(NODE_A), NOW + 60)
             .await;
@@ -921,6 +1039,7 @@ mod tests {
         let logged_out = Inputs {
             node: Some(NODE_A.to_string()),
             has_key: false,
+            key_settled: true,
         };
         let out = watcher.reconcile(Some(&db), &logged_out, NOW + 15).await;
 
@@ -1033,6 +1152,7 @@ mod tests {
                         NOW,
                     )
                     .await
+                    .unwrap()
             })
         };
         for _ in 0..10 {
@@ -1078,7 +1198,7 @@ mod tests {
         watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
 
         // Off, and the token deleted, as Dart does.
-        watcher.set_enabled(Some(&db), false).await;
+        watcher.set_enabled(Some(&db), false).await.unwrap();
         watcher.set_token(Some(&db), None).await.unwrap();
         let outcome = watcher.reconcile(Some(&db), &on(NODE_A), NOW + 5).await;
 
@@ -1105,6 +1225,7 @@ mod tests {
         let logged_out = Inputs {
             node: Some(NODE_A.to_string()),
             has_key: false,
+            key_settled: true,
         };
         let out = watcher.reconcile(Some(&db), &logged_out, NOW + 5).await;
         assert_eq!(out.status, Status::Waiting);
@@ -1363,7 +1484,7 @@ mod tests {
     async fn a_watcher_with_no_server_asks_nobody() {
         let db = store().await;
         let watcher = Watcher::new(None);
-        watcher.set_enabled(Some(&db), true).await;
+        watcher.set_enabled(Some(&db), true).await.unwrap();
         watcher
             .set_token(Some(&db), Some(TOKEN.to_string()))
             .await
@@ -1385,7 +1506,7 @@ mod tests {
         let (base, seen) = serve(200).await;
         let none = None::<&SqliteStorage>;
         let watcher = Watcher::to(&base);
-        watcher.set_enabled(none, true).await;
+        watcher.set_enabled(none, true).await.unwrap();
         watcher
             .set_token(none, Some(TOKEN.to_string()))
             .await
@@ -1405,7 +1526,11 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(!Watcher::new(None).enabled(Some(&db)).await);
+        let watcher = Watcher::new(None);
+        assert!(!watcher.enabled(Some(&db)).await.unwrap());
+        // Said once, for Dart to delete the device's token.
+        assert!(watcher.take_lost(Some(&db)).await);
+        assert!(!watcher.take_lost(Some(&db)).await);
     }
 
     #[tokio::test]
@@ -1421,10 +1546,171 @@ mod tests {
         // offer, now or later.
         let db = store().await;
         let watcher = Watcher::new(None);
-        watcher.set_enabled(Some(&db), true).await;
+        watcher.set_enabled(Some(&db), true).await.unwrap();
         assert!(!watcher.take_offer(Some(&db)).await);
-        watcher.set_enabled(Some(&db), false).await;
+        watcher.set_enabled(Some(&db), false).await.unwrap();
         assert!(!watcher.take_offer(Some(&db)).await);
+    }
+
+    /// The app was not opened for over a month: the server has dropped the
+    /// watch, so a renewal that fails is a watch that is not there.
+    #[tokio::test]
+    async fn a_watch_older_than_the_server_keeps_it_is_not_taken_as_registered() {
+        let (base, seen, watch, _unwatch) = server(200, 200).await;
+        let db = store().await;
+        let watcher = ready(&base, &db).await;
+        watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+
+        watch.store(429, Ordering::SeqCst);
+        let late = NOW + SERVER_KEEPS_SECS;
+        let lapsed = watcher.reconcile(Some(&db), &on(NODE_A), late).await;
+        assert_eq!(lapsed.status, Status::RateLimited);
+
+        // One second short of it the server still holds the watch.
+        let (base, _seen, watch, _unwatch) = server(200, 200).await;
+        let db = store().await;
+        let watcher = ready(&base, &db).await;
+        watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+        watch.store(429, Ordering::SeqCst);
+        let standing = watcher
+            .reconcile(Some(&db), &on(NODE_A), late - 1)
+            .await;
+        assert_eq!(standing.status, Status::Registered);
+
+        // And a lapsed watch of a node the solver left is not unwatched:
+        // there is nothing to drop.
+        let (base, seen_b, _watch, _unwatch) = server(200, 200).await;
+        let db = store().await;
+        let watcher = ready(&base, &db).await;
+        watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+        watcher.reconcile(Some(&db), &on(NODE_B), late).await;
+        assert_eq!(asked(&seen_b)[1..], [call("watch", NODE_B, TOKEN)]);
+        drop(seen);
+    }
+
+    /// Replacing a key unloads the old one first. A run of the retry task
+    /// that falls in between must not drop the watch.
+    #[tokio::test]
+    async fn a_run_that_cannot_tell_a_logout_leaves_the_watch_for_one_that_can() {
+        let (base, seen) = serve(200).await;
+        let db = store().await;
+        let watcher = ready(&base, &db).await;
+        watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+        let no_key = |key_settled| Inputs {
+            node: Some(NODE_A.to_string()),
+            has_key: false,
+            key_settled,
+        };
+
+        // The retry task, in the gap: nothing is asked, and it looks again.
+        let gap = watcher.reconcile(Some(&db), &no_key(false), NOW + 5).await;
+        assert_eq!(
+            gap,
+            Outcome {
+                status: Status::Registered,
+                retry_in: Some(KEY_WAIT_SECS)
+            }
+        );
+        assert_eq!(seen.lock().unwrap().len(), 1);
+        // The new key is loaded: the watch stands, nothing was asked.
+        let replaced = watcher.reconcile(Some(&db), &on(NODE_A), NOW + 6).await;
+        assert_eq!(replaced.status, Status::Registered);
+        assert_eq!(seen.lock().unwrap().len(), 1);
+
+        // A logout, as Dart reports it once it settled, does drop it.
+        let out = watcher.reconcile(Some(&db), &no_key(true), NOW + 10).await;
+        assert_eq!(out.status, Status::Waiting);
+        assert_eq!(asked(&seen)[1..], [call("unwatch", NODE_A, TOKEN)]);
+    }
+
+    /// With no key and no watch there is nothing to protect: an unwatch
+    /// still to do is tried by the retry task as before.
+    #[tokio::test]
+    async fn the_retry_task_still_does_the_unwatches_of_a_logged_out_solver() {
+        let (base, seen, _watch, unwatch) = server(200, 500).await;
+        let db = store().await;
+        let watcher = ready(&base, &db).await;
+        watcher.reconcile(Some(&db), &on(NODE_A), NOW).await;
+        let no_key = |key_settled| Inputs {
+            node: Some(NODE_A.to_string()),
+            has_key: false,
+            key_settled,
+        };
+        // The logout, with the server failing: the unwatch stays to do.
+        watcher.reconcile(Some(&db), &no_key(true), NOW + 5).await;
+
+        unwatch.store(200, Ordering::SeqCst);
+        let retried = watcher.reconcile(Some(&db), &no_key(false), NOW + 60).await;
+
+        assert_eq!(retried.retry_in, None);
+        assert_eq!(asked(&seen).last(), Some(&call("unwatch", NODE_A, TOKEN)));
+        assert_eq!(seen.lock().unwrap().len(), 3);
+    }
+
+    /// A store whose read can be made to fail.
+    struct Flaky {
+        inner: SqliteStorage,
+        fails: std::sync::atomic::AtomicBool,
+    }
+
+    impl WatchStore for Flaky {
+        async fn read(&self) -> anyhow::Result<Option<String>> {
+            if self.fails.load(Ordering::SeqCst) {
+                anyhow::bail!("database is locked");
+            }
+            WatchStore::read(&self.inner).await
+        }
+
+        async fn write(&self, json: &str) -> anyhow::Result<()> {
+            WatchStore::write(&self.inner, json).await
+        }
+    }
+
+    /// A read that fails once at startup must not pass for "nothing
+    /// stored": the switch would read off, the watch would be forgotten
+    /// with the server still ringing, and the next write would replace
+    /// what is really stored.
+    #[tokio::test]
+    async fn a_failed_read_is_not_taken_for_an_empty_store() {
+        let (base, seen) = serve(200).await;
+        let inner = store().await;
+        ready(&base, &inner)
+            .await
+            .reconcile(Some(&inner), &on(NODE_A), NOW)
+            .await;
+        let db = Flaky {
+            inner,
+            fails: std::sync::atomic::AtomicBool::new(true),
+        };
+
+        // Another process, whose first reads fail.
+        let watcher = Watcher::to(&base);
+        assert_eq!(
+            watcher.enabled(Some(&db)).await.unwrap_err().to_string(),
+            "StorageUnavailable"
+        );
+        assert!(watcher.set_enabled(Some(&db), true).await.is_err());
+        assert!(watcher
+            .set_token(Some(&db), Some(OTHER_TOKEN.to_string()))
+            .await
+            .is_err());
+        assert!(!watcher.take_offer(Some(&db)).await);
+        assert!(!watcher.take_lost(Some(&db)).await);
+        let failed = watcher
+            .reconcile_with(Some(&db), || async { on(NODE_A) }, NOW + 5)
+            .await;
+        assert!(failed.is_err());
+        assert_eq!(seen.lock().unwrap().len(), 1, "nothing asked of the server");
+
+        // The storage answers again: everything is as it was stored.
+        db.fails.store(false, Ordering::SeqCst);
+        assert!(watcher.enabled(Some(&db)).await.unwrap());
+        let outcome = watcher
+            .reconcile_with(Some(&db), || async { on(NODE_A) }, NOW + 10)
+            .await
+            .unwrap();
+        assert_eq!(outcome.status, Status::Registered);
+        assert_eq!(seen.lock().unwrap().len(), 1, "the stored watch is fresh");
     }
 
     #[tokio::test]

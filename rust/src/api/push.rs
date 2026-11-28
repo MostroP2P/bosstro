@@ -64,8 +64,18 @@ fn watcher() -> &'static Watcher {
 }
 
 /// Whether the solver turned notifications on. Off until they do.
-pub async fn push_enabled() -> bool {
+///
+/// **Errors**: `StorageUnavailable`, when what is stored could not be read
+/// this time. It is not "off": ask again.
+pub async fn push_enabled() -> Result<bool> {
     watcher().enabled(crate::db::app_db::db()).await
+}
+
+/// Whether what was stored about notifications was found unreadable and
+/// started over, said once. The switch then reads off while Google still
+/// holds the device's token: Dart deletes it.
+pub async fn take_push_state_lost() -> bool {
+    watcher().take_lost(crate::db::app_db::db()).await
 }
 
 /// Whether to offer the solver notifications now. Yes at most once in the
@@ -78,10 +88,12 @@ pub async fn take_push_offer() -> bool {
 /// Turn the notifications of new disputes on or off, and bring the push
 /// server in step: turning them off drops the watch. Dart deletes the
 /// device's token itself and says so with [`set_push_token`].
-pub async fn set_push_enabled(enabled: bool) -> PushWatchStatus {
+///
+/// **Errors**: `StorageUnavailable`, with nothing changed.
+pub async fn set_push_enabled(enabled: bool) -> Result<PushWatchStatus> {
     watcher()
         .set_enabled(crate::db::app_db::db(), enabled)
-        .await;
+        .await?;
     reconcile_push().await
 }
 
@@ -89,12 +101,13 @@ pub async fn set_push_enabled(enabled: bool) -> PushWatchStatus {
 /// forget it with `None` once Dart deleted it, and bring the push server in
 /// step.
 ///
-/// **Errors**: `InvalidToken`, for what cannot be an FCM token.
+/// **Errors**: `InvalidToken`, for what cannot be an FCM token;
+/// `StorageUnavailable`, with nothing changed.
 pub async fn set_push_token(token: Option<String>) -> Result<PushWatchStatus> {
     watcher()
         .set_token(crate::db::app_db::db(), token)
         .await?;
-    Ok(reconcile_push().await)
+    reconcile_push().await
 }
 
 /// Make the push server agree with what should be watched: the active node,
@@ -103,19 +116,32 @@ pub async fn set_push_token(token: Option<String>) -> Result<PushWatchStatus> {
 ///
 /// A run that has to be tried again (the server down, a rate limit, an
 /// unwatch that failed) is, by itself, while the process lives.
-pub async fn reconcile_push() -> PushWatchStatus {
-    let outcome = run().await;
-    retry_later(outcome.retry_in);
-    outcome.status.into()
+///
+/// Call it once a key change has settled, never in the middle of one: this
+/// run takes "no key" for a logout and drops the watch.
+///
+/// **Errors**: `StorageUnavailable`, when what is stored could not be read:
+/// nothing was asked of the server. It is tried again by itself.
+pub async fn reconcile_push() -> Result<PushWatchStatus> {
+    let outcome = run(true).await;
+    retry_later(match &outcome {
+        Ok(outcome) => outcome.retry_in,
+        Err(_) => Some(crate::push::watch::STORAGE_RETRY_SECS),
+    });
+    Ok(outcome?.status.into())
 }
 
-async fn run() -> Outcome {
+/// One run. `key_settled` says whether "no key" is a logout
+/// (`crate::push::watch::Inputs::key_settled`): yes when Dart asks, no
+/// from the retry task.
+async fn run(key_settled: bool) -> Result<Outcome> {
     // Read by the run once it has its turn, not here: this may wait behind
     // another run, and the node or the key may change meanwhile.
-    let inputs = || async {
+    let inputs = || async move {
         Inputs {
             node: crate::config::active_mostro_pubkey(),
             has_key: SOLVER_SLOT.keys().await.is_some(),
+            key_settled,
         }
     };
     watcher()
@@ -136,9 +162,13 @@ fn retry_later(retry_in: Option<i64>) {
             if LATEST.load(Ordering::SeqCst) != mine {
                 return;
             }
-            match run().await.retry_in {
-                Some(next) => wait = next,
-                None => return,
+            match run(false).await {
+                Ok(Outcome {
+                    retry_in: Some(next),
+                    ..
+                }) => wait = next,
+                Ok(_) => return,
+                Err(_) => wait = crate::push::watch::STORAGE_RETRY_SECS,
             }
         }
     });
