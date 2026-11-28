@@ -78,10 +78,24 @@ class FakePushCore implements PushCore {
 
   PushWatchStatus get _status => isEnabled ? registered : PushWatchStatus.off;
 
+  /// When set, reading the switch fails with it.
+  Object? enabledError;
+
+  /// What was stored was lost. Said once; not in the log.
+  bool stateLost = false;
+
   @override
   Future<bool> enabled() async {
     calls.log.add('core.enabled');
+    if (enabledError != null) throw enabledError!;
     return isEnabled;
+  }
+
+  @override
+  Future<bool> takeStateLost() async {
+    final lost = stateLost;
+    stateLost = false;
+    return lost;
   }
 
   @override

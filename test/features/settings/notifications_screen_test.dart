@@ -164,6 +164,23 @@ void main() {
     expect(find.text('Language'), findsOneWidget);
   });
 
+  testWidgets('its address leads to Settings where no push can be received', (
+    tester,
+  ) async {
+    // A typed URL on the web build.
+    setSurface(tester, width: 400, height: 800);
+    await pumpApp(
+      tester,
+      location: AppRoute.notifications,
+      locale: const Locale('en'),
+      textScale: 1,
+      overrides: fakeCoreOverrides(canPush: false),
+    );
+
+    expect(find.byType(NotificationsScreen), findsNothing);
+    expect(find.text('Language'), findsOneWidget);
+  });
+
   testWidgets('off: the switch is off, no status, and what it shares is said', (
     tester,
   ) async {

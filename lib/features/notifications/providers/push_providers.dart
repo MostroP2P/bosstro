@@ -88,6 +88,10 @@ class PushController extends Notifier<PushState> {
   PushMessaging get _messaging => ref.read(pushMessagingProvider);
   bool get _canPush => ref.read(canPushProvider);
 
+  /// Whether the switch was read from the core. A read that failed at
+  /// startup is made again at the next look.
+  bool _started = false;
+
   StreamSubscription<String>? _refreshes;
   StreamSubscription<void>? _taps;
 
@@ -121,7 +125,10 @@ class PushController extends Notifier<PushState> {
     final enabled = await _serial(() async {
       if (!_canPush) return false;
       try {
-        if (!await _core.enabled()) {
+        final enabled = await _core.enabled();
+        _started = true;
+        if (!enabled) {
+          if (await _core.takeStateLost()) await _forgetDevice();
           state = PushState(status: await _core.reconcile());
           return false;
         }
@@ -141,12 +148,27 @@ class PushController extends Notifier<PushState> {
     });
     if (!enabled) return;
     final token = await _token();
-    if (token != null) await _keep(token);
+    if (token != null) await _arrived(token);
   }
 
-  /// Hand the core a token Google gave, if notifications are still on.
-  Future<void> _keep(String token) => _serial(() async {
-    if (!state.enabled) return;
+  /// What was stored was lost while notifications were on: the core has
+  /// forgotten the watch and the token, and Google still holds the token.
+  /// Deleting it is what stops the pushes, and what "off" promises.
+  Future<void> _forgetDevice() async {
+    debugPrint('[push] stored state lost: deleting the device token');
+    await _quietly(_messaging.deleteToken);
+    await _quietly(() => _messaging.setAutoInit(false));
+  }
+
+  /// Where every token Google gives ends up, whenever it comes: a request
+  /// may answer long after it was made, and the switch may have changed
+  /// meanwhile. On, it is the device's token and goes to the core. Off, it
+  /// must not stay with Google: off means no token.
+  Future<void> _arrived(String token) => _serial(() async {
+    if (!state.enabled) {
+      await _quietly(_messaging.deleteToken);
+      return;
+    }
     try {
       state = PushState(
         enabled: true,
@@ -245,7 +267,14 @@ class PushController extends Notifier<PushState> {
 
   /// The node, the key or the time changed: have the core bring the push
   /// server in step.
-  Future<void> reconcile() => _serial(() async {
+  Future<void> reconcile() {
+    // The switch was never read (the storage failed at startup): that
+    // first, or this would report on a switch taken for off.
+    if (_canPush && !_started) return start();
+    return _reconcile();
+  }
+
+  Future<void> _reconcile() => _serial(() async {
     if (!_canPush) return;
     try {
       final status = await _core.reconcile();
@@ -269,7 +298,7 @@ class PushController extends Notifier<PushState> {
       },
     );
     _refreshes ??= _messaging.tokenRefreshes().listen(
-      _keep,
+      _arrived,
       onError: (Object e) {
         debugPrint('[push] token changes not followed: ${e.runtimeType}');
       },
@@ -299,10 +328,7 @@ class PushController extends Notifier<PushState> {
     }
   }
 
-  /// A token that came after its request was given up on. With
-  /// notifications on it is the device's token and goes to the core. With
-  /// them off (turning them on failed for want of it, or they were turned
-  /// off meanwhile) it must not stay with Google: off means no token.
+  /// A token that came after its request was given up on.
   Future<void> _late(Future<String?> asked) async {
     String? token;
     try {
@@ -311,11 +337,7 @@ class PushController extends Notifier<PushState> {
       return;
     }
     if (token == null || token.isEmpty) return;
-    if (state.enabled) return _keep(token);
-    await _serial(() async {
-      if (state.enabled) return;
-      await _quietly(_messaging.deleteToken);
-    });
+    await _arrived(token);
   }
 
   Future<void> _quietly(Future<void> Function() step) async {

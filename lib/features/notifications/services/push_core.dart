@@ -6,8 +6,14 @@ export 'package:bosstro/src/rust/api/push.dart' show PushWatchStatus;
 /// the token and the watch on the push server. Behind an interface so tests
 /// run without the bridge.
 abstract class PushCore {
-  /// Whether the solver turned notifications on.
+  /// Whether the solver turned notifications on. Throws when what is
+  /// stored could not be read this time: that is not "off".
   Future<bool> enabled();
+
+  /// Whether what was stored was found unreadable and started over, said
+  /// once. The switch then reads off while Google still holds the device's
+  /// token.
+  Future<bool> takeStateLost();
 
   /// Turn them on or off and bring the push server in step.
   Future<push_api.PushWatchStatus> setEnabled(bool enabled);
@@ -29,6 +35,9 @@ class RustPushCore implements PushCore {
 
   @override
   Future<bool> enabled() => push_api.pushEnabled();
+
+  @override
+  Future<bool> takeStateLost() => push_api.takePushStateLost();
 
   @override
   Future<push_api.PushWatchStatus> setEnabled(bool enabled) =>

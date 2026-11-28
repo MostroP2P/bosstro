@@ -201,9 +201,12 @@ void main() {
     await controller.disable();
     expect(core.isEnabled, isFalse);
 
+    // Google answers the request startup made, with notifications off by
+    // now: the token it issued is deleted, not left behind.
+    calls.log.clear();
     messaging.tokenLater!.complete('token-1');
     await starting;
-    expect(calls.log, isNot(contains('core.setToken(token-1)')));
+    expect(calls.log, ['deleteToken']);
   });
 
   test('a core that fails to take the token leaves the switch on', () async {
@@ -216,6 +219,50 @@ void main() {
     // Off here with the core on could not be turned off from the app.
     expect(c.read(pushControllerProvider).enabled, isTrue);
   });
+
+  test('a stored state that was lost has the device token deleted', () async {
+    // The core started over: its switch reads off, and Google still holds
+    // the token of when it was on.
+    core.stateLost = true;
+    final c = container();
+
+    await c.read(pushControllerProvider.notifier).start();
+
+    expect(calls.log, [
+      'core.enabled',
+      'deleteToken',
+      'setAutoInit(false)',
+      'core.reconcile',
+    ]);
+    expect(c.read(pushControllerProvider).enabled, isFalse);
+    // Said once.
+    calls.log.clear();
+    await c.read(pushControllerProvider.notifier).reconcile();
+    expect(calls.log, ['core.reconcile']);
+  });
+
+  test(
+    'a switch that could not be read at startup is read at the next look',
+    () async {
+      core.isEnabled = true;
+      core.enabledError = StateError('StorageUnavailable');
+      final c = container();
+      final controller = c.read(pushControllerProvider.notifier);
+
+      await controller.start();
+      // Not taken for off: nothing is known yet.
+      expect(c.read(pushControllerProvider), const PushState());
+
+      core.enabledError = null;
+      await controller.reconcile();
+
+      expect(
+        c.read(pushControllerProvider),
+        const PushState(enabled: true, status: PushWatchStatus.registered),
+      );
+      expect(calls.log, contains('core.setToken(token-1)'));
+    },
+  );
 
   test('on, with the permission taken away: it says blocked', () async {
     core.isEnabled = true;
